@@ -1,0 +1,10 @@
+.link_remove {
+  color: #CB4335;
+  font-size:16px;
+  padding: 0;
+}
+
+.link_remove:active, .link_remove:focus,.link_remove:hover {
+    color: #E74C3C;
+}
+

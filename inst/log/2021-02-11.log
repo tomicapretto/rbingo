@@ -1,0 +1,16 @@
+00:08:26 - replacement has 3 rows, data has 1
+00:09:11 - replacement has 3 rows, data has 1
+00:09:23 - replacement has 3 rows, data has 1
+00:09:59 - replacement has 8 rows, data has 1
+00:15:16 - column name "" cannot match any column
+00:17:41 - unused arguments (label = "Delete", onclick = "Shiny.onInputChange(\"lastClick\",  this.id)")
+00:53:32 - replacement has 10 rows, data has 0
+01:08:45 - 'data' must be 2-dimensional (e.g. data frame or matrix)
+01:09:36 - 'data' must be 2-dimensional (e.g. data frame or matrix)
+01:09:48 - invalid 'length' argument
+01:10:13 - invalid 'length' argument
+01:10:50 - invalid 'length' argument
+01:27:57 - 'data' must be 2-dimensional (e.g. data frame or matrix)
+10:16:35 - object 'd' not found
+10:16:38 - object 'd' not found
+10:23:24 - attempt to select less than one element in get1index

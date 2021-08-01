@@ -1,0 +1,70 @@
+.board-row {
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1px;
+  margin-bottom: 1px;
+  width: 90%;
+}
+
+a.board-cell {
+  color: #ecf0f1;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 58px;
+  font-size: 36px;
+  text-decoration:none;
+}
+
+a.board-cell.disabled {
+  pointer-events: none;
+  cursor: default;
+  opacity: 0.8;
+}
+
+.board-cell {
+  display: inline-block;
+  width: 9%;
+  max-width: 100px;
+  height: 60px;
+  cursor: pointer;
+  border: 1px solid #444;
+  border-radius: 0;
+  -moz-border-radius: 0;
+  -webkit-border-radius: 0;
+}
+
+.board-cell {
+  background: #2c3e50;
+}
+
+.board-cell:hover {
+  background: #34495e;
+}
+
+.board-cell.disabled {
+  background: #27ae60;
+}
+
+.board-counter {
+  font-weight: bold;
+  color: #c0392b;
+}
+
+.board-winner {
+  font-weight: bold;
+  color: #2980b9;
+}
+
+.board-prize {
+  font-weight: bold;
+}
+
+.next-prize {
+  color: #2980b9;
+}
+
+/*By default it is 100% but I want this little separation*/
+.btn-group-justified>.btn-group .btn {
+  width: 97.5%;
+  font-size: 16px;
+}

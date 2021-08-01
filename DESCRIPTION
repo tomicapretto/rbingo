@@ -1,0 +1,32 @@
+Package: rbingo
+Type: Package
+Title: Aplicacion para administrar y jugar partidas de Bingo
+Version: 0.1.4
+Author: person(given = "Tomas",
+              family = "Capretto",
+              role = c("aut", "cre"),
+              email = "tomicapretto@gmail.com")
+Maintainer: Tomas Capretto <tomicapretto@gmail.com>
+Description: Este paquete contiene una aplicacion escrita en Shiny
+    para administrar y jugar partida de Bingo. La aplicacion permite
+    generar, imprimir y jugar con hasta 60000 cartones de bingo distintos.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Remotes:
+    github::dreamRs/shinypop
+Imports: 
+    shiny (>= 1.5.0),
+    shinyjs (>= 2.0.0),
+    shinydashboard (>= 0.7.1),
+    R6 (>= 2.4.1),
+    stringr (>= 1.4.0),
+    purrr (>= 0.3.4),
+    colourpicker (>= 1.1.0),
+    farver (>= 2.0.3),
+    shinyWidgets (>= 0.5.1),
+    shinypop,
+    DT (>= 0.13),
+    rlang (>= 0.4.8),
+    glue
+RoxygenNote: 7.1.1

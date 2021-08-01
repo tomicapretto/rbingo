@@ -1,0 +1,66 @@
+.ball-display {
+  position: absolute;
+  z-index: 99999;
+  top: 2vw;
+  right: 3vw;
+  bottom: auto;
+  width: 90px;
+  display: flex;
+  border-radius: 100%;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  box-shadow: inset 0.5rem 0.5rem 1.5rem 0.25rem hsla(0, 0%, 100%, 0.3),
+    inset -0.25rem -0.25rem 1.5rem 0.5rem rgba(0, 0, 0, 0.4);
+}
+
+.ball-display {
+  background: radial-gradient(circle at 20% 20%, red, #910000);
+}
+
+.ball-display .content {
+  border: 0.15rem solid red;
+  min-height: 0;
+  text-align: center;
+  border-radius: 100%;
+  position: relative;
+  padding: 25%;
+  box-shadow: inset -0.5rem -0.5rem 2rem 0 rgba(0, 0, 0, 0.16),
+    0 0 0 0.25rem #fff;
+  background: radial-gradient(circle at 20% 20%, #fff, #efefef);
+}
+
+.ball-display .content .ball-content {
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  text-align: center;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.ball-number {
+  font-size: 36px;
+}
+
+.ball-display:after {
+  content: "";
+  display: block;
+  padding-bottom: 100%;
+}
+
+.btn-group-justified {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+}
+
+.btn-group-justified > .btn,
+.btn-group-justified > .btn-group {
+  width: 33.33%;
+  margin: 3px 0;
+}

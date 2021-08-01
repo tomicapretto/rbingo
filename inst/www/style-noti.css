@@ -1,0 +1,25 @@
+/*#shiny-notification-panel {
+  position: fixed;
+  top: 90px;
+  right: 40px;
+  bottom: auto;
+  background-color: rgba(0,0,0,0);
+  padding: 2px;
+  width: 200px;
+  z-index: 99999;
+}
+
+.shiny-notification-content {
+  text-align: center;
+  font-size: 20px;
+}
+*/
+
+/*This is the default, but here we can change stuff*/
+/*
+.shiny-notification-message {
+  color: #31708f;
+  background-color: #d9edf7;
+  border: 1px solid #bce8f1;
+}
+*/
