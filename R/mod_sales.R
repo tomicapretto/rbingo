@@ -25,7 +25,7 @@ salesServer <- function(id, store, games, vendors) {
             lengthChange = FALSE,
             language = DT_SPANISH,
             columnDefs = list(
-              list(width = "10%", class = "dt-right", targets = ncol(data))
+              list(width = "10%", class = "dt-right", targets = ncol(data) - 1)
             )
           )
         )

@@ -811,7 +811,7 @@ boardUI <- function(id) {
                     lapply(seq(10), function(num) {
                       value <- num + 10 * dec
                       id <- NS(id, paste0("num_", value))
-                      actionLink(inputId = id, label = value, class = "board-cell")
+                      actionLink(id, value, class = "board-cell")
                     })
                   )
                 )
