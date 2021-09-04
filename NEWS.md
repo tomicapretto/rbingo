@@ -1,3 +1,12 @@
+# rbingo XXX
+
+* Todas los premios estan seleccionados por defecto en el panel donde se
+comienza el juego.
+* Los botones del tablero ahora usan CSS Flex, por lo que su tamano se 
+adapta segun la pantalla.
+* Ya no es posible clickear botones luego de que se hayan sorteado todos los 
+premios.
+
 # rbingo 0.1.4
 
 * Focus on "input$from" when insert/delete buttons are pressed in Sales panel.

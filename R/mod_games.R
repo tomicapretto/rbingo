@@ -172,16 +172,18 @@ gamesServer <- function(id, store, games) {
       if (isTruthy(input$partida_report)) {
         results <- games$results(input$partida_report)
         cards <- results$cards_n
-        date <- results$date
         serie <- results$serie
         balls <- results$balls_n
+        date_start <- format(results$date_start, "%Y/%m/%d %H:%M:%S")
+        date_end <- format(results$date_end, "%Y/%m/%d %H:%M:%S")
       } else {
-        cards <- date <- serie <- balls <- ""
+        cards <- date <- serie <- balls <- date_start <- date_end <- ""
       }
       shinyjs::html("cards_summary", cards)
-      shinyjs::html("date_summary", date)
       shinyjs::html("serie_summary", serie)
       shinyjs::html("balls_summary", balls)
+      shinyjs::html("date_start", date_start)
+      shinyjs::html("date_end", date_end)
     })
 
     output$report_summary <- renderUI({
@@ -192,7 +194,8 @@ gamesServer <- function(id, store, games) {
           summaryRow,
           paste("Ganadores de", results$winners_names),
           results$winners_count,
-          SIMPLIFY = FALSE, USE.NAMES = FALSE
+          SIMPLIFY = FALSE,
+          USE.NAMES = FALSE
         )
       )
     })
@@ -237,7 +240,7 @@ tabPanelCreate <- function(id) {
         f = dateInput,
         colwidth = 6,
         inputId = NS(id, "fecha"),
-        label = "Fecha de sorteo",
+        label = "Fecha tentativa",
         language = "es",
         format = "dd-mm-yyyy",
         min = Sys.Date()
@@ -282,7 +285,7 @@ tabPanelModify <- function(id) {
         f = dateInput,
         colwidth = 6,
         inputId = NS(id, "fecha_mod"),
-        label = "Fecha de sorteo",
+        label = "Fecha tentativa",
         language = "es",
         format = "dd-mm-yyyy",
         min = Sys.Date()
@@ -370,16 +373,20 @@ tabPanelReports <- function(id) {
             id = NS(id, "cards_summary")
           ),
           summaryRow(
-            name = "Fecha de juego",
-            id = NS(id, "date_summary")
-          ),
-          summaryRow(
             name = "Serie",
             id = NS(id, "serie_summary")
           ),
           summaryRow(
             name = "Bolillas jugadas",
             id = NS(id, "balls_summary")
+          ),
+          summaryRow(
+            name = "Inicio",
+            id = NS(id, "date_start")
+          ),
+          summaryRow(
+            name = "Finalizacion",
+            id = NS(id, "date_end")
           )
         ),
         column(

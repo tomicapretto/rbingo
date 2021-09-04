@@ -23,7 +23,6 @@ playServer <- function(id, store, games, cards, parent_session) {
     observeEvent(input$btn_jugar, {
       appCatch({
         if (!isTruthy(input$prizes)) {
-          showError
           showError("Se debe seleccionar al menos un premio")
         }
         if (!"Carton lleno" %in% input$prizes) {
@@ -36,7 +35,8 @@ playServer <- function(id, store, games, cards, parent_session) {
         store$partida_info <- list(
           "partida" = input$partida,
           "prizes" = input$prizes,
-          "pozo_acumulado" = input$pozo_acumulado
+          "pozo_acumulado" = input$pozo_acumulado,
+          "date_start" = Sys.time()
         )
         store$playing <- TRUE
         if (!cards$loaded) {
@@ -86,6 +86,10 @@ playUI <- function(id) {
                 inputId = NS(id, "prizes"),
                 label = "Seleccione los premios a sortear",
                 choices = c(
+                  "Terno", "Cuaterno", "Linea", "Carton lleno",
+                  "Bingo consuelo", "Menor acierto"
+                ),
+                selected = c(
                   "Terno", "Cuaterno", "Linea", "Carton lleno",
                   "Bingo consuelo", "Menor acierto"
                 ),

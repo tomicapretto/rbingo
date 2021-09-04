@@ -172,7 +172,9 @@ boardServer <- function(id, store, games, cards, parent_session) {
       req(store$playing)
       appCatch({
         if (mod_store$next_prize == "DONE") {
-          msg <- "Podra visualizar el informe de la partida en la solapa 'Informes'."
+          msg <- HTML(
+            "Podra visualizar el informe de la partida en la solapa <strong>Reportes</strong>."
+          )
         } else {
           msg <- paste(
             "Esta partida aun cuenta con sorteos por finalizar.",
@@ -200,9 +202,10 @@ boardServer <- function(id, store, games, cards, parent_session) {
                   game_info <- list(
                     "parameters" = list(
                       name = mod_store$partida,
-                      date = format(games$date(mod_store$partida), "%d-%m-%y"),
                       serie = games$serie(mod_store$partida),
-                      cards_n = mod_store$cards_playing
+                      cards_n = mod_store$cards_playing,
+                      date_start = store$partida_info$date_start,
+                      date_end = Sys.time()
                     ),
                     "results" = list(
                       line_3 = if (!is.null(win_state$line_3)) length(win_state$line_3) else "",
@@ -238,7 +241,7 @@ boardServer <- function(id, store, games, cards, parent_session) {
       id <- paste0("num_", num)
       observeEvent(input[[id]], {
         appCatch({
-          req(store$playing)
+          req(store$playing, mod_store$next_prize != "DONE")
           mod_store$player$add_ball(as.numeric(num))
           mod_store$nums <- c(mod_store$nums, as.numeric(num))
           mod_store$last <- "add"
@@ -283,6 +286,24 @@ boardServer <- function(id, store, games, cards, parent_session) {
         shinyjs::html("balls_played", text)
       })
     })
+
+    observe({
+      appCatch({
+        req(store$playing, mod_store$player)
+        req(length(mod_store$nums) == store$partida_info$pozo_acumulado)
+        title <- "Pozo acumulado vacante!"
+        msg <- paste(
+          "Nadie ha obtenido carton lleno luego de haber sorteado",
+          store$partida_info$pozo_acumulado,
+          "bolillas."
+        )
+        if (finished$card) {
+          shinypop::nx_report_info(title, msg)
+        }
+      })
+    },
+    priority = -10 # Run after other observers to wait for finished$card being updated
+  )
 
     observeEvent(mod_store$nums, {
       appCatch({
@@ -801,7 +822,7 @@ boardUI <- function(id) {
           column(
             width = 8,
             tags$div(
-              style = "text-align:center;margin-top:-10px",
+              style = "text-align: center; padding-top: 10px",
               id = NS(id, "board_div"),
               tags$br(),
               lapply(0:8, function(dec) {
@@ -820,7 +841,13 @@ boardUI <- function(id) {
               fluidRow(
                 column(
                   width = 12,
-                  tags$span(htmlOutput(NS(id, "balls_draw")), style = "font-size:28px;")
+                  tags$span(
+                    htmlOutput(
+                      NS(id, "balls_draw"),
+                      style = "width: 90%; margin: 0 auto;"
+                    ),
+                    style = "font-size:28px;"
+                  )
                 )
               )
             )
@@ -831,15 +858,16 @@ boardUI <- function(id) {
               tagList(
                 tags$p(
                   id = NS(id, "balls_played"), "Bolillas jugadas: 0",
-                  style = "font-size:20px"
+                  style = "font-size: 20px"
                 ),
                 tags$p(
                   id = NS(id, "time_played"), "Tiempo de juego: 0 min. 0 seg.",
-                  style = "font-size:20px"
+                  style = "font-size: 20px"
                 ),
                 tags$p(
-                  id = NS(id, "pozo_acumulado"), "Pozo acumulado en bolilla:",
-                  style = "font-size:20px"
+                  id = NS(id, "pozo_acumulado"),
+                  "Pozo acumulado en bolilla:",
+                  style = "font-size: 20px"
                 )
               ),
               style = "margin-top:10px"
@@ -1001,12 +1029,12 @@ boardUI <- function(id) {
             tags$hr(style = "border-top: 3px solid #d2d6de; border-radius:10px "),
             actionButton(NS(id, "delete_last"), "Eliminar ultimo",
               width = "100%",
-              style = "height:45px;font-size:22px"
+              style = "height:45px; font-size:22px"
             ),
             tags$hr(style = "border-top: 3px solid #d2d6de; border-radius:10px "),
             actionButton(NS(id, "btn_stop"), "Finalizar partida",
               width = "100%",
-              style = "height:45px;font-size:22px"
+              style = "height:45px; font-size:22px"
             )
           )
         )

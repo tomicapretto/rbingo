@@ -1,18 +1,17 @@
 .board-row {
-  margin-left: auto;
-  margin-right: auto;
-  margin-top: 1px;
-  margin-bottom: 1px;
-  width: 90%;
+  display:flex;
+  justify-content:center;
+  margin: 1px auto;
+  width:90%;
 }
 
 a.board-cell {
   color: #ecf0f1;
   text-align: center;
-  vertical-align: middle;
   line-height: 58px;
   font-size: 36px;
   text-decoration:none;
+  vertical-align: middle;
 }
 
 a.board-cell.disabled {
@@ -22,10 +21,8 @@ a.board-cell.disabled {
 }
 
 .board-cell {
-  display: inline-block;
-  width: 9%;
-  max-width: 100px;
-  height: 60px;
+  flex: 1;
+  margin: 0 1px;
   cursor: pointer;
   border: 1px solid #444;
   border-radius: 0;

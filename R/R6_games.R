@@ -297,7 +297,8 @@ Game <- R6::R6Class(
     results = function() {
       if (self$rvs$meta$played) {
         serie <- self$rvs$meta$finalized_info$parameters$serie
-        date <- self$rvs$meta$finalized_info$parameters$date
+        date_start <- self$rvs$meta$finalized_info$parameters$date_start
+        date_end <- self$rvs$meta$finalized_info$parameters$date_end
         cards_n <- self$rvs$meta$finalized_info$parameters$cards_n
         balls_n <- length(self$rvs$meta$finalized_info$sequence)
         winners <- self$rvs$meta$finalized_info$winners
@@ -311,8 +312,9 @@ Game <- R6::R6Class(
         }
 
         return(list(
-          "serie" = serie, "date" = date, "cards_n" = cards_n,
-          "balls_n" = balls_n, "winners_names" = winners_names,
+          "serie" = serie, "cards_n" = cards_n, "balls_n" = balls_n,
+          "date_start" = date_start, "date_end" = date_end,
+          "winners_names" = winners_names,
           "winners_count" = winners_count
         ))
       }
@@ -358,9 +360,10 @@ print_header <- function() {
 
 print_parameters <- function(parameters) {
   name <- parameters$name
-  date <- parameters$date
   serie <- parameters$serie
   cards_n <- parameters$cards_n
+  date_start <- parameters$date_start
+  date_end <- parameters$date_end
   grid::grid.text(
     label = "Parametros",
     x = grid::unit(0.025, "npc"),
@@ -369,14 +372,25 @@ print_parameters <- function(parameters) {
     gp = grid::gpar(fontsize = 12, fontface = "bold")
   )
   grid::grid.text(
-    label = paste("Nombre", "Fecha", "Serie", "Cantidad de cartones en juego", sep = "\n"),
+    label = paste(
+      "Nombre", "Serie", "Cantidad de cartones en juego",
+      "Inicio", "Finalizacion",
+      sep = "\n"
+    ),
     x = grid::unit(0.025, "npc"),
     y = grid::unit(0.8, "npc"),
     just = c("left", "top"),
     gp = grid::gpar(fontsize = 12)
   )
   grid::grid.text(
-    label = paste(name, date, serie, cards_n, sep = "\n"),
+    label = paste(
+      name,
+      serie,
+      cards_n,
+      format(date_start, "%Y/%m/%d %H:%M:%S"),
+      format(date_end, "%Y/%m/%d %H:%M:%S"),
+      sep = "\n"
+    ),
     x = grid::unit(0.975, "npc"),
     y = grid::unit(0.8, "npc"),
     just = c("right", "top"),

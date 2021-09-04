@@ -18,11 +18,12 @@ ui_body <- function() {
       tags$style("rbingo-body {min-height: 100vh !important}"),
     ),
 
-    # JS to hide header (pass 'none' to hide and '' to unhide)
+    # JS para ocultar el header. 'none' para ocultar y '' to mostrar
     shinyjs::extendShinyjs(
       text = "shinyjs.hideHeader = function(p) {$('header').css('display', p)}",
       functions = "hideHeader"
     ),
+    # JS para hace focus en elementos
     shinyjs::extendShinyjs(
       text = "shinyjs.refocus = function(e_id) {
         document.getElementById(e_id).focus();
@@ -30,7 +31,7 @@ ui_body <- function() {
       functions = "refocus"
     ),
 
-    # Enable notifications
+    # Activar notificaciones
     shinypop::use_notiflix_notify(
       position = "right-bottom",
       timeout = 8000
