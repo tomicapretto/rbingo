@@ -7,7 +7,7 @@ app_server <- function(input, output, session) {
     cards <- Cards$new()
   })
 
-  gamesServer("games", store, games)
+  gamesServer("games", games)
   vendorsServer("vendors", store, games, vendors)
   salesServer("sales", store, games, vendors)
   cardsServer("cards", store, games, cards)

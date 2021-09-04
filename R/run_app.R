@@ -17,6 +17,6 @@
 #' @importFrom utils tail
 
 #' @export
-run_app <- function(options = list()) {
+run_app <- function(options = list(launch.browser=TRUE)) {
   shiny::shinyApp(app_ui(), app_server, options = options)
 }

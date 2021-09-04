@@ -51,58 +51,39 @@ boardServer <- function(id, store, games, cards, parent_session) {
     observeEvent(store$playing, {
       appCatch({
         req(store$playing)
-
         mod_store$partida <- store$partida_info$partida
         mod_store$player <- Player$new(games$return_game(mod_store$partida), cards)
         mod_store$cards_playing <- mod_store$player$sales_count
         mod_store$playing_time <- 0
 
-        # Deshabilito premios y anticipos si no se juegan
-        if (!"Terno" %in% store$partida_info$prizes) {
-          shinyjs::hide("wrow_line3")
-          playing$line_3 <- FALSE
-        } else {
-          shinyjs::show("wrow_line3")
-          playing$line_3 <- TRUE
-        }
-
-        if (!"Cuaterno" %in% store$partida_info$prizes) {
-          shinyjs::hide("wrow_line4")
-          playing$line_4 <- FALSE
-        } else {
-          shinyjs::show("wrow_line4")
-          playing$line_4 <- TRUE
-        }
-
-        if (!"Linea" %in% store$partida_info$prizes) {
-          shinyjs::hide("wrow_line5")
-          playing$line_5 <- FALSE
-        } else {
-          shinyjs::show("wrow_line5")
-          playing$line_5 <- TRUE
-        }
-
-        # NOTA: Siempre se juega al carton
-        playing$card <- TRUE
-
-        if (!"Bingo consuelo" %in% store$partida_info$prizes) {
-          playing$card_2 <- FALSE
-          shinyjs::hide("wrow_card2")
-        } else {
-          playing$card_2 <- TRUE
-          shinyjs::show("wrow_card2")
-        }
-
-        if (!"Menor acierto" %in% store$partida_info$prizes) {
-          shinyjs::hide("wrow_looser")
-          playing$looser <- FALSE
-        } else {
-          shinyjs::show("wrow_looser")
-          playing$looser <- TRUE
-        }
+        playing$line_3 <- "Terno" %in% store$partida_info$prizes
+        playing$line_4 <- "Cuaterno" %in% store$partida_info$prizes
+        playing$line_5 <- "Linea" %in% store$partida_info$prizes
+        playing$card <- "Carton lleno" %in% store$partida_info$prizes
+        playing$card_2 <- "Bingo consuelo" %in% store$partida_info$prizes
+        playing$looser <- "Menor acierto" %in% store$partida_info$prizes
       })
     })
 
+    # Crea div con los ganadores
+    output$winners <- renderUI({
+      lapply(
+        store$partida_info$prizes,
+        function(x) displayWinners(id, x)
+      )
+    })
+
+    # Ocultar adelantos cuando se haya sorteado todo.
+    observe({
+      req(mod_store$next_prize)
+      if (mod_store$next_prize == "DONE") {
+        shinyjs::hide("adelantos")
+      } else {
+        shinyjs::show("adelantos")
+      }
+    })
+
+    # TODO: El temporizador deberia correr en JS.
     observe({
       appCatch({
         req(store$playing)
@@ -117,16 +98,19 @@ boardServer <- function(id, store, games, cards, parent_session) {
       })
     })
 
-    output$board_header <- renderUI({
+
+    observe({
       appCatch({
         req(store$playing)
-        req(mod_store$cards_playing)
-        HTML(paste0(
-          "Jugando la partida '", mod_store$partida, "'", "<br/>",
-          "Cartones en juego: ", mod_store$cards_playing
-        ))
+        shinyjs::html("partida_en_juego", mod_store$partida)
+        shinyjs::html("cartones_en_juego", mod_store$cards_playing)
       })
     })
+
+    updateAdvances <- function(label, value) {
+      shinyjs::html("adelanto-label", label)
+      shinyjs::html("adelanto-value", value)
+    }
 
     # Titulo que indica el proximo premio
     output$next_prize <- renderUI({
@@ -134,21 +118,25 @@ boardServer <- function(id, store, games, cards, parent_session) {
         req(store$playing)
         if (playing$line_3 && !finished$line_3) {
           mod_store$next_prize <- "Terno"
-          shinyjs::show("irow_match2")
+          updateAdvances(
+            "Cartones con 2 aciertos en linea", length(matches$line_2)
+          )
         } else if (playing$line_4 && !finished$line_4) {
           mod_store$next_prize <- "Cuaterno"
-          shinyjs::show("irow_match3")
+          updateAdvances(
+            "Cartones con 3 aciertos en linea", length(matches$line_3)
+          )
         } else if (playing$line_5 && !finished$line_5) {
           mod_store$next_prize <- "Linea"
-          shinyjs::show("irow_match4")
+          updateAdvances(
+            "Cartones con 4 aciertos en linea", length(matches$line_4)
+          )
         } else if (playing$card && !finished$card) {
           mod_store$next_prize <- "Carton lleno"
-          shinyjs::show("irow_match13")
-          shinyjs::show("irow_match14")
+          updateAdvances("Cartones con 14 aciertos", length(matches$card_14))
         } else if (playing$card_2 && !finished$card_2) {
           mod_store$next_prize <- "Bingo consuelo"
-          shinyjs::show("irow_match13")
-          shinyjs::show("irow_match14")
+          updateAdvances("Cartones con 14 aciertos", length(matches$card_14))
         } else if (playing$looser && !finished$looser) {
           mod_store$next_prize <- "Menor acierto"
         } else {
@@ -326,29 +314,13 @@ boardServer <- function(id, store, games, cards, parent_session) {
 
     # Premios en la linea ------------------------------------------------------
     # Terno
-    observe({
-      appCatch({
-        req(store$playing, playing$line_3, !finished$line_3)
-        shinyjs::html("match2", length(matches$line_2))
-      })
-    })
-
     observeEvent(winners$line_3, {
       appCatch({
         req(store$playing, !finished$line_3, length(winners$line_3) > 0)
         report_winners(winners$line_3, "Terno!")
         finished$line_3 <- TRUE
         win_state$line_3 <- mod_store$nums
-        shinyjs::hide("irow_match2")
         shinyjs::html("match2", "Finalizado")
-      })
-    })
-
-    # Cuaterno
-    observe({
-      appCatch({
-        req(store$playing, playing$line_4, !finished$line_4)
-        shinyjs::html("match3", length(matches$line_3))
       })
     })
 
@@ -358,26 +330,17 @@ boardServer <- function(id, store, games, cards, parent_session) {
         report_winners(winners$line_4, "Cuaterno!")
         finished$line_4 <- TRUE
         win_state$line_4 <- mod_store$nums
-        shinyjs::hide("irow_match3")
         shinyjs::html("match3", "Finalizado")
       })
     })
 
     # Linea
-    observe({
-      appCatch({
-        req(store$playing, playing$line_5, !finished$line_5)
-        shinyjs::html("match4", length(matches$line_4))
-      })
-    })
-
     observeEvent(winners$line_5, {
       appCatch({
         req(store$playing, !finished$line_5, length(winners$line_5) > 0)
         report_winners(winners$line_5, "Linea completa!")
         finished$line_5 <- TRUE
         win_state$line_5 <- mod_store$nums
-        shinyjs::hide("irow_match4")
         shinyjs::html("match4", "Finalizado")
       })
     })
@@ -397,8 +360,8 @@ boardServer <- function(id, store, games, cards, parent_session) {
         } else {
           text <- text2 <- ""
         }
-        shinyjs::html("winners3", text)
-        shinyjs::html("winners3n", text2)
+        shinyjs::html("winners-terno", text)
+        shinyjs::html("n-winners-terno", text2)
       })
     })
 
@@ -416,8 +379,8 @@ boardServer <- function(id, store, games, cards, parent_session) {
         } else {
           text <- text2 <- ""
         }
-        shinyjs::html("winners4", text)
-        shinyjs::html("winners4n", text2)
+        shinyjs::html("winners-cuaterno", text)
+        shinyjs::html("n-winners-cuaterno", text2)
       })
     })
 
@@ -435,8 +398,8 @@ boardServer <- function(id, store, games, cards, parent_session) {
         } else {
           text <- text2 <- ""
         }
-        shinyjs::html("winners5", text)
-        shinyjs::html("winners5n", text2)
+        shinyjs::html("winners-linea", text)
+        shinyjs::html("n-winners-linea", text2)
       })
     })
 
@@ -467,21 +430,6 @@ boardServer <- function(id, store, games, cards, parent_session) {
     observe({
       appCatch({
         req(store$playing)
-        if ((playing$card || playing$card_2) && (!(finished$card && finished$card_2))) {
-          shinyjs::html("match13", length(matches$card_13))
-          shinyjs::html("match14", length(matches$card_14))
-        } else {
-          shinyjs::hide("irow_match13")
-          shinyjs::hide("irow_match14")
-          shinyjs::html("match13", "Finalizado")
-          shinyjs::html("match14", "Finalizado")
-        }
-      })
-    })
-
-    observe({
-      appCatch({
-        req(store$playing)
         if (length(winners$card) > 0) {
           text <- paste0("N", intToUtf8(176), " ", winners$card, collapse = ", ")
           text <- stringr::str_trunc(text, 32, side = "right")
@@ -493,8 +441,8 @@ boardServer <- function(id, store, games, cards, parent_session) {
         } else {
           text <- text2 <- ""
         }
-        shinyjs::html("winners15", text)
-        shinyjs::html("winners15n", text2)
+        shinyjs::html("winners-carton-lleno", text)
+        shinyjs::html("n-winners-carton-lleno", text2)
 
         if (length(winners$card_2) > 0) {
           text <- paste0("N", intToUtf8(176), " ", winners$card_2, collapse = ", ")
@@ -507,8 +455,8 @@ boardServer <- function(id, store, games, cards, parent_session) {
         } else {
           text <- text2 <- ""
         }
-        shinyjs::html("winners16", text)
-        shinyjs::html("winners16n", text2)
+        shinyjs::html("winners-bingo-consuelo", text)
+        shinyjs::html("n-winners-bingo-consuelo", text2)
       })
     })
 
@@ -527,9 +475,9 @@ boardServer <- function(id, store, games, cards, parent_session) {
         } else {
           text <- text2 <- text3 <- ""
         }
-        shinyjs::html("winners0", text)
-        shinyjs::html("winners0n", text2)
-        shinyjs::html("winners0hits", text3)
+        shinyjs::html("winners-menor-acierto", text)
+        shinyjs::html("n-winners-menor-acierto", text2)
+        #shinyjs::html("winners0hits", text3)
       })
     })
 
@@ -795,6 +743,41 @@ get_winner_cards <- function(winners) {
 }
 
 
+
+board <- function(id) {
+  add_cell <- function(unit, ten) {
+    value <- unit + 10 * ten
+    id <- NS(id, paste0("num_", value))
+    actionLink(
+      id,
+      value,
+      class = "board-cell",
+      onclick = "console.log('You clicked!');",
+    )
+  }
+
+  add_row <- function(ten) {
+    tags$div(class = "board-row", lapply(seq(10), add_cell, ten = ten))
+  }
+
+  add_board <- function(tens) {
+    lapply(tens, add_row)
+  }
+
+  tags$div(
+    class = "board-container",
+    tags$div(
+      class = "board",
+      id = NS(id, "board_div"),
+      add_board(0:8)
+    ),
+    tags$div(
+      class = "board-numbers",
+      htmlOutput(NS(id, "balls_draw"))
+    )
+  )
+}
+
 boardUI <- function(id) {
   tagList(
     bingoBall(NS(id, "ball")),
@@ -807,13 +790,28 @@ boardUI <- function(id) {
         fluidRow(
           column(
             width = 8,
-            tags$span(htmlOutput(NS(id, "board_header")),
-              style = "font-size: 20px; text-align: center"
+            tags$div(
+              class = "board-header",
+              tags$p(
+                "Jugando la partida",
+                tags$span(
+                  id = NS(id, "partida_en_juego"),
+                  style = "font-weight: bold"
+                )
+              ),
+              tags$p(
+                "Cartones en juego",
+                tags$span(
+                  id = NS(id, "cartones_en_juego"),
+                  style = "font-weight: bold"
+                )
+              )
             )
           ),
           column(
             width = 4,
-            tags$span(htmlOutput(NS(id, "next_prize")),
+            tags$div(
+              htmlOutput(NS(id, "next_prize")),
               style = "font-size: 20px; text-align: center; font-weight:bold"
             )
           )
@@ -821,36 +819,7 @@ boardUI <- function(id) {
         fluidRow(
           column(
             width = 8,
-            tags$div(
-              style = "text-align: center; padding-top: 10px",
-              id = NS(id, "board_div"),
-              tags$br(),
-              lapply(0:8, function(dec) {
-                tagList(
-                  tags$div(
-                    class = "board-row",
-                    lapply(seq(10), function(num) {
-                      value <- num + 10 * dec
-                      id <- NS(id, paste0("num_", value))
-                      actionLink(id, value, class = "board-cell")
-                    })
-                  )
-                )
-              }),
-              tags$br(),
-              fluidRow(
-                column(
-                  width = 12,
-                  tags$span(
-                    htmlOutput(
-                      NS(id, "balls_draw"),
-                      style = "width: 90%; margin: 0 auto;"
-                    ),
-                    style = "font-size:28px;"
-                  )
-                )
-              )
-            )
+            board(id)
           ),
           column(
             width = 4,
@@ -861,7 +830,8 @@ boardUI <- function(id) {
                   style = "font-size: 20px"
                 ),
                 tags$p(
-                  id = NS(id, "time_played"), "Tiempo de juego: 0 min. 0 seg.",
+                  id = NS(id, "time_played"),
+                  "Tiempo de juego: 0 min. 0 seg.",
                   style = "font-size: 20px"
                 ),
                 tags$p(
@@ -872,169 +842,29 @@ boardUI <- function(id) {
               ),
               style = "margin-top:10px"
             ),
-            tags$hr(style = "border-top: 3px solid #d2d6de; border-radius:10px"),
-            tags$p("Adelantos",
-              style = "font-size:20px;text-align:center;font-weight:bold"
-            ),
-            shinyjs::hidden(
-              tags$p(
-                id = NS(id, "irow_match2"),
-                "Cartones con 2 aciertos en linea",
-                tags$span(id = NS(id, "match2"), class = "board-counter"),
-                style = "font-size:20px"
-              )
-            ),
-            shinyjs::hidden(
-              tags$p(
-                id = NS(id, "irow_match3"),
-                "Cartones con 3 aciertos en linea",
-                tags$span(id = NS(id, "match3"), class = "board-counter"),
-                style = "font-size:20px"
-              )
-            ),
-            shinyjs::hidden(
-              tags$p(
-                id = NS(id, "irow_match4"),
-                "Cartones con 4 aciertos en linea",
-                tags$span(id = NS(id, "match4"), class = "board-counter"),
-                style = "font-size:20px"
-              )
-            ),
-            shinyjs::hidden(
-              tags$p(
-                id = NS(id, "irow_match13"),
-                "Cartones con 13 aciertos",
-                tags$span(id = NS(id, "match13"), class = "board-counter"),
-                style = "font-size:20px"
-              )
-            ),
-            shinyjs::hidden(
-              tags$p(
-                id = NS(id, "irow_match14"),
-                "Cartones con 14 aciertos",
-                tags$span(id = NS(id, "match14"), class = "board-counter"),
-                style = "font-size:20px"
-              )
-            ),
-            tags$hr(style = "border-top: 3px solid #d2d6de; border-radius:10px "),
-            tags$p("Cartones ganadores",
-              style = "font-size:20px;text-align:center;font-weight:bold"
-            ),
+            horizontal_line(),
+            # TODO: Hay que ocultar este div cuando se haya sorteado todo!
             tags$div(
-              fluidRow(
-                id = NS(id, "wrow_line3"),
-                column(
-                  width = 8,
-                  tags$p(
-                    "Terno",
-                    tags$span(id = NS(id, "winners3"), class = "board-winner")
-                  )
-                ),
-                column(
-                  width = 4,
-                  tags$p(
-                    tags$span(id = NS(id, "winners3n"), class = "board-prize"),
-                    style = "text-align:right;"
-                  )
+              id = NS(id, "adelantos"),
+              tags$div("Adelantos", class = "board-info-header"),
+              tags$div(
+                tags$p(
+                  tags$span(id = NS(id, "adelanto-label")),
+                  tags$span(id = NS(id, "adelanto-value"), class = "board-counter"),
+                  class = "board-adelanto"
                 )
               ),
-              fluidRow(
-                id = NS(id, "wrow_line4"),
-                column(
-                  width = 8,
-                  tags$p(
-                    "Cuaterno",
-                    tags$span(id = NS(id, "winners4"), class = "board-winner")
-                  )
-                ),
-                column(
-                  width = 4,
-                  tags$p(
-                    tags$span(id = NS(id, "winners4n"), class = "board-prize"),
-                    style = "text-align:right;"
-                  )
-                )
-              ),
-              fluidRow(
-                id = NS(id, "wrow_line5"),
-                column(
-                  width = 8,
-                  tags$p(
-                    "Linea",
-                    tags$span(id = NS(id, "winners5"), class = "board-winner")
-                  )
-                ),
-                column(
-                  width = 4,
-                  tags$p(
-                    tags$span(id = NS(id, "winners5n"), class = "board-prize"),
-                    style = "text-align:right;"
-                  )
-                )
-              ),
-              fluidRow(
-                id = NS(id, "wrow_card"),
-                column(
-                  width = 8,
-                  tags$p(
-                    "Carton lleno",
-                    tags$span(id = NS(id, "winners15"), class = "board-winner")
-                  )
-                ),
-                column(
-                  width = 4,
-                  tags$p(
-                    tags$span(id = NS(id, "winners15n"), class = "board-prize"),
-                    style = "text-align:right;"
-                  )
-                )
-              ),
-              fluidRow(
-                id = NS(id, "wrow_card2"),
-                column(
-                  width = 8,
-                  tags$p(
-                    "Bingo consuelo",
-                    tags$span(id = NS(id, "winners16"), class = "board-winner")
-                  )
-                ),
-                column(
-                  width = 4,
-                  tags$p(
-                    tags$span(id = NS(id, "winners16n"), class = "board-prize"),
-                    style = "text-align:right;"
-                  )
-                )
-              ),
-              fluidRow(
-                id = NS(id, "wrow_looser"),
-                column(
-                  width = 8,
-                  tags$p(
-                    "Menor acierto",
-                    tags$span(id = NS(id, "winners0"), class = "board-winner")
-                  ),
-                  tags$span(id = NS(id, "winners0hits"), style = "color:#c0392b;")
-                ),
-                column(
-                  width = 4,
-                  tags$p(
-                    tags$span(id = NS(id, "winners0n"), class = "board-prize"),
-                    style = "text-align:right;"
-                  )
-                )
-              ),
-              style = "font-size:20px"
+              horizontal_line()
             ),
-            tags$hr(style = "border-top: 3px solid #d2d6de; border-radius:10px "),
-            actionButton(NS(id, "delete_last"), "Eliminar ultimo",
-              width = "100%",
-              style = "height:45px; font-size:22px"
+            tags$div("Cartones ganadores", class = "board-info-header"),
+            uiOutput(NS(id, "winners")),
+            horizontal_line(),
+            actionButton(
+              NS(id, "delete_last"), "Eliminar ultimo", class = "board-btn"
             ),
-            tags$hr(style = "border-top: 3px solid #d2d6de; border-radius:10px "),
-            actionButton(NS(id, "btn_stop"), "Finalizar partida",
-              width = "100%",
-              style = "height:45px; font-size:22px"
+            horizontal_line(),
+            actionButton(
+              NS(id, "btn_stop"), "Finalizar partida", class = "board-btn"
             )
           )
         )
@@ -1042,3 +872,33 @@ boardUI <- function(id) {
     )
   )
 }
+
+
+displayWinners <- function(id, prize) {
+  name <- paste0(tolower(unlist(strsplit(prize, split = " "))), collapse = "-")
+  fluidRow(
+    class = "board-adelanto",
+    column(
+      width = 9,
+      tags$p(
+        prize,
+        tags$span(
+          id = NS(id, paste0("winners-", name)),
+          class = "board-winner"
+        )
+      )
+    ),
+    column(
+      width = 3,
+      tags$p(
+        tags$span(
+          id = NS(id, paste0("n-winners-", name)),
+          class = "board-prize"
+        ),
+        style = "text-align: right;"
+      )
+    )
+  )
+}
+
+

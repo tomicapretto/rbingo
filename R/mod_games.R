@@ -1,12 +1,15 @@
-gamesServer <- function(id, store, games) {
+gamesServer <- function(id, games) {
   moduleServer(id, function(input, output, session) {
-    isolate({
-      appCatch({
-        mod_store <- reactiveValues()
-      })
-    })
+    gamesCreateServer("crear", games)
+    gamesModifyServer("modificar", games)
+    gamesDeleteServer("eliminar", games)
+    gamesReportsServer("reportes", games)
+  })
+}
 
-    observeEvent(input$btn_add, {
+gamesCreateServer <- function(id, games) {
+  moduleServer(id, function(input, output, session) {
+    observeEvent(input$btn_crear, {
       appCatch({
         req(input$nombre, input$fecha, input$tiras_n)
         if (input$tiras_n <= 0) {
@@ -16,84 +19,66 @@ gamesServer <- function(id, store, games) {
           showError("La cantidad de tiras no puede ser mayor a 10000.")
         }
         games$new_game(input$nombre, input$fecha, round(input$tiras_n))
-        shinypop::nx_notify_success(
+        showSuccess(
           paste0("La partida '", input$nombre, "' fue creada exitosamente.")
         )
       })
     })
+  })
+}
 
+gamesModifyServer <- function(id, games) {
+  moduleServer(id, function(input, output, session) {
     observe({
       appCatch({
-        updateSelectInput(
-          session = session,
-          inputId = "partida_mod",
-          choices = games$names("unplayed")
-        )
+        updateSelectInput(session, "partida", choices = games$names("unplayed"))
       })
     })
 
-    observeEvent(input$partida_mod, {
+    observeEvent(input$partida, {
+      req(input$partida)
       appCatch({
-        if (input$partida_mod == "") {
-          carton <- NA
-          fecha <- NA
-        } else {
-          carton <- games$cards_n(input$partida_mod)
-          fecha <- games$date(input$partida_mod)
-        }
-        updateNumericInput(
-          session = session,
-          inputId = "tiras_n_mod",
-          value = carton / 6
-        )
-        updateDateInput(
-          session = session,
-          inputId = "fecha_mod",
-          value = fecha
-        )
+        cartones <- games$cards_n(input$partida)
+        fecha <- games$date(input$partida)
+        updateNumericInput(session, "tiras_n", value = cartones / 6)
+        updateDateInput(session, "fecha", value = fecha)
       })
     })
 
-    observeEvent(input$btn_modify, {
+    observeEvent(input$btn_modificar, {
       appCatch({
-        req(input$partida_mod, input$tiras_n_mod, input$fecha_mod)
-        cards_n_current <- games$cards_n(input$partida_mod)
-        date_current <- games$date(input$partida_mod)
+        req(input$partida, input$tiras_n, input$fecha)
+        cards_n_current <- games$cards_n(input$partida)
+        date_current <- games$date(input$partida)
         if (
-          cards_n_current == (input$tiras_n_mod * 6) &
-            date_current == input$fecha_mod
-        ) {
+          cards_n_current == (input$tiras_n * 6) &
+          date_current == input$fecha) {
           req(FALSE)
         }
-
-        if (input$tiras_n_mod * 6 < cards_n_current) {
-          showError(
-            "No se puede disminuir la cantidad de cartones de una partida"
-          )
+        if (input$tiras_n * 6 < cards_n_current) {
+          showError("No se puede disminuir la cantidad de cartones de una partida")
         }
-        games$modify_game(input$partida_mod, input$tiras_n_mod, input$fecha_mod)
-        shinypop::nx_notify_info(
-          paste0(
-            "La partida '", input$partida_mod, "' fue modificada exitosamente."
-          )
+        games$modify_game(input$partida, input$tiras_n, input$fecha)
+        showInfo(
+          paste0("La partida '", input$partida, "' fue modificada exitosamente.")
         )
       })
     })
+  })
+}
 
+gamesDeleteServer <- function(id, games) {
+  moduleServer(id, function(input, output, session) {
     observe({
       appCatch({
-        updateSelectInput(
-          session = session,
-          inputId = "partida_rem",
-          choices = games$names("unplayed")
-        )
+        updateSelectInput(session, "partida", choices = games$names("unplayed"))
       })
     })
 
-    observeEvent(input$btn_remove, {
+    observeEvent(input$btn_eliminar, {
       appCatch({
-        req(input$partida_rem)
-        sales_count <- games$sales_count(input$partida_rem)
+        req(input$partida)
+        sales_count <- games$sales_count(input$partida)
         if (sales_count != 0) {
           shinypop::nx_confirm(
             inputId = "confirm",
@@ -102,53 +87,53 @@ gamesServer <- function(id, store, games) {
             button_ok = "Confirmar",
             button_cancel = "Cancelar"
           )
-          observeEvent(input$confirm,
-            {
-              if (input$confirm) games$remove_game(input$partida_rem)
+          observeEvent(input$confirm, {
+            if (input$confirm) games$remove_game(input$partida)
             },
             once = TRUE,
             ignoreInit = TRUE
           )
         } else {
-          games$remove_game(input$partida_rem)
+          games$remove_game(input$partida)
         }
       })
     })
 
-    mod_store$delete_info_txt <- eventReactive(input$partida_rem, {
+
+    info <- eventReactive(input$partida, {
       appCatch({
-        if (isTruthy(input$partida_rem)) {
+        if (isTruthy(input$partida)) {
           msg <- c(
-            "Fecha estipulada de juego: ",
-            games$date(input$partida_rem), "\n",
+            " Fecha estipulada de juego: ",
+            format(games$date(input$partida), "%d-%m-%Y"), "\n",
             "Cantidad de cartones vendidos: ",
-            games$sales_count(input$partida_rem), "\n",
+            games$sales_count(input$partida), "\n",
             "Cantidad de cartones: ",
-            games$cards_n(input$partida_rem)
+            games$cards_n(input$partida)
           )
           paste0(msg)
         }
       })
     })
 
-    output$delete_info_txt <- renderText({
-      appCatch(mod_store$delete_info_txt())
+    output$info <- renderText({
+      info()
     })
 
-    # Seccion de reporte
+  })
+}
+
+gamesReportsServer <- function(id, games) {
+  moduleServer(id, function(input, output, session) {
     observe({
       appCatch({
-        updateSelectInput(
-          session = session,
-          inputId = "partida_report",
-          choices = games$names("played")
-        )
+        updateSelectInput(session, "partida", choices = games$names("played"))
       })
     })
 
     observe({
       appCatch({
-        if (isTruthy(input$partida_report)) {
+        if (isTruthy(input$partida)) {
           shinyjs::enable("download")
         } else {
           shinyjs::disable("download")
@@ -158,19 +143,19 @@ gamesServer <- function(id, store, games) {
 
     output$download <- downloadHandler(
       filename = function() {
-        appCatch(paste0("reporte_", input$partida_report, ".pdf"))
+        appCatch(paste0("reporte_", input$partida, ".pdf"))
       },
       content = function(file) {
         appCatch({
-          path <- file.path(games$path(input$partida_report), "report.pdf")
+          path <- file.path(games$path(input$partida), "report.pdf")
           file.copy(path, file)
         })
       }
     )
 
     observe({
-      if (isTruthy(input$partida_report)) {
-        results <- games$results(input$partida_report)
+      if (isTruthy(input$partida)) {
+        results <- games$results(input$partida)
         cards <- results$cards_n
         serie <- results$serie
         balls <- results$balls_n
@@ -179,16 +164,16 @@ gamesServer <- function(id, store, games) {
       } else {
         cards <- date <- serie <- balls <- date_start <- date_end <- ""
       }
-      shinyjs::html("cards_summary", cards)
-      shinyjs::html("serie_summary", serie)
-      shinyjs::html("balls_summary", balls)
-      shinyjs::html("date_start", date_start)
-      shinyjs::html("date_end", date_end)
+      shinyjs::html("cartones_jugados", cards)
+      shinyjs::html("serie", serie)
+      shinyjs::html("bolillas_jugadas", balls)
+      shinyjs::html("fecha_inicio", date_start)
+      shinyjs::html("fecha_finalizacion", date_end)
     })
 
-    output$report_summary <- renderUI({
-      req(input$partida_report)
-      results <- games$results(input$partida_report)
+    output$resumen_reporte <- renderUI({
+      req(input$partida)
+      results <- games$results(input$partida)
       tagList(
         mapply(
           summaryRow,
@@ -202,6 +187,7 @@ gamesServer <- function(id, store, games) {
   })
 }
 
+# UI
 gamesUI <- function(id) {
   tagList(
     fluidRow(
@@ -209,9 +195,9 @@ gamesUI <- function(id) {
         height = "auto",
         width = 12,
         title = "Partidas a jugar",
-        tabPanelCreate(id),
-        tabPanelModify(id),
-        tabPanelDelete(id)
+        gamesCreateUI(NS(id, "crear")),
+        gamesModifyUI(NS(id, "modificar")),
+        gamesDeleteUI(NS(id, "eliminar"))
       )
     ),
     fluidRow(
@@ -219,13 +205,13 @@ gamesUI <- function(id) {
         height = "auto",
         width = 12,
         title = "Partidas jugadas",
-        tabPanelReports(id)
+        gamesReportsUI(NS(id, "reportes"))
       )
     )
   )
 }
 
-tabPanelCreate <- function(id) {
+gamesCreateUI <- function(id) {
   tabPanel(
     title = "Crear",
     fluidRow(
@@ -262,7 +248,7 @@ tabPanelCreate <- function(id) {
       colInput(
         f = actionButton,
         colwidth = 6,
-        inputId = NS(id, "btn_add"),
+        inputId = NS(id, "btn_crear"),
         label = "Crear partida",
         width = "100%"
       )
@@ -270,21 +256,21 @@ tabPanelCreate <- function(id) {
   )
 }
 
-tabPanelModify <- function(id) {
+gamesModifyUI <- function(id) {
   tabPanel(
     title = "Modificar",
     fluidRow(
       colInput(
         f = selectInput,
         colwidth = 6,
-        inputId = NS(id, "partida_mod"),
+        inputId = NS(id, "partida"),
         label = "Partida",
         choices = ""
       ),
       colInput(
         f = dateInput,
         colwidth = 6,
-        inputId = NS(id, "fecha_mod"),
+        inputId = NS(id, "fecha"),
         label = "Fecha tentativa",
         language = "es",
         format = "dd-mm-yyyy",
@@ -295,7 +281,7 @@ tabPanelModify <- function(id) {
       colInput(
         f = numericInput,
         colwidth = 6,
-        inputId = NS(id, "tiras_n_mod"),
+        inputId = NS(id, "tiras_n"),
         label = "Cantidad de tiras",
         width = "100%",
         value = NULL,
@@ -307,7 +293,7 @@ tabPanelModify <- function(id) {
       colInput(
         f = actionButton,
         colwidth = 6,
-        inputId = NS(id, "btn_modify"),
+        inputId = NS(id, "btn_modificar"),
         label = "Modificar partida",
         width = "100%"
       )
@@ -315,19 +301,19 @@ tabPanelModify <- function(id) {
   )
 }
 
-tabPanelDelete <- function(id) {
+gamesDeleteUI <- function(id) {
   tabPanel(
     title = "Eliminar",
     fluidRow(
       column(
         width = 6,
         selectInput(
-          inputId = NS(id, "partida_rem"),
+          inputId = NS(id, "partida"),
           label = "Partida",
           choices = ""
         ),
         actionButton(
-          inputId = NS(id, "btn_remove"),
+          inputId = NS(id, "btn_eliminar"),
           label = "Eliminar partida",
           width = "100%"
         )
@@ -337,7 +323,7 @@ tabPanelDelete <- function(id) {
         tags$div(
           style = "margin-top: 24.5px;",
           verbatimTextOutput(
-            outputId = NS(id, "delete_info_txt"),
+            outputId = NS(id, "info"),
             placeholder = TRUE
           )
         )
@@ -346,19 +332,19 @@ tabPanelDelete <- function(id) {
   )
 }
 
-tabPanelReports <- function(id) {
+gamesReportsUI <- function(id) {
   tabPanel(
     title = "Reportes",
     fluidRow(
       column(
         width = 6,
         selectInput(
-          inputId = NS(id, "partida_report"),
+          inputId = NS(id, "partida"),
           label = "Partida",
           choices = ""
         ),
         downloadButton(
-          outputId = NS(id, "download"),
+          outputId = NS(id, "descargar"),
           label = "Descargar reporte",
           style = "width: 100%;"
         )
@@ -370,28 +356,28 @@ tabPanelReports <- function(id) {
           width = 6,
           summaryRow(
             name = "Cartones jugados",
-            id = NS(id, "cards_summary")
+            id = NS(id, "cartones_jugados")
           ),
           summaryRow(
             name = "Serie",
-            id = NS(id, "serie_summary")
+            id = NS(id, "serie")
           ),
           summaryRow(
             name = "Bolillas jugadas",
-            id = NS(id, "balls_summary")
+            id = NS(id, "bolillas_jugadas")
           ),
           summaryRow(
             name = "Inicio",
-            id = NS(id, "date_start")
+            id = NS(id, "fecha_inicio")
           ),
           summaryRow(
             name = "Finalizacion",
-            id = NS(id, "date_end")
+            id = NS(id, "fecha_finalizacion")
           )
         ),
         column(
           width = 6,
-          uiOutput(NS(id, "report_summary"))
+          uiOutput(NS(id, "resumen_reporte"))
         )
       ),
       style = paste(

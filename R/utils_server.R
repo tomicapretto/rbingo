@@ -3,6 +3,14 @@ showError <- function(msg) {
   req(FALSE)
 }
 
+showInfo <- function(msg) {
+  shinypop::nx_notify_info(msg)
+}
+
+showSuccess <- function(msg) {
+  shinypop::nx_notify_success(msg)
+}
+
 stop2 <- function(message, call = NULL, ...) {
   err <- structure(
     list(

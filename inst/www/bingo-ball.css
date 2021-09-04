@@ -15,11 +15,11 @@
 }
 
 .ball-display {
-  background: radial-gradient(circle at 20% 20%, red, #910000);
+  background: radial-gradient(circle at 20% 20%, #337ab7, #337ab7);
 }
 
 .ball-display .content {
-  border: 0.15rem solid red;
+  border: 0.15rem solid #337ab7;
   min-height: 0;
   text-align: center;
   border-radius: 100%;

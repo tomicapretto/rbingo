@@ -1,8 +1,19 @@
+.board-container {
+  margin:0 auto;
+  padding-top: 10px;
+  width: 90%
+}
+
+.board-numbers {
+  margin-top: 12px;
+  font-size: 32px;
+  text-align: center;
+}
+
 .board-row {
   display:flex;
   justify-content:center;
   margin: 1px auto;
-  width:90%;
 }
 
 a.board-cell {
@@ -42,9 +53,15 @@ a.board-cell.disabled {
   background: #27ae60;
 }
 
+.board-adelanto {
+  font-size: 20px;
+}
+
 .board-counter {
-  font-weight: bold;
   color: #c0392b;
+  font-weight: bold;
+  margin-left: 5px;
+
 }
 
 .board-winner {
@@ -64,4 +81,36 @@ a.board-cell.disabled {
 .btn-group-justified>.btn-group .btn {
   width: 97.5%;
   font-size: 16px;
+}
+
+.board-hr {
+  border-radius:10px;
+  border-top: 3px solid #d2d6de;
+}
+
+.board-btn {
+  height:45px;
+  font-size:22px;
+  width: 100%
+}
+
+
+.board-msg {
+  font-size: 20px;
+}
+
+.board-info-header {
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.board-msg-result{
+  font-weight: bold;
+}
+
+
+.board-header {
+  font-size: 20px;
+  text-align: center;
 }

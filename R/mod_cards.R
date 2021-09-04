@@ -149,7 +149,6 @@ cardsGenerateUI <- function(id) {
   )
 }
 
-
 cardsDownloadUI <- function(id) {
   fluidRow(
     shinydashboard::tabBox(

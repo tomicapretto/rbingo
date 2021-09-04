@@ -70,3 +70,7 @@ summaryRow <- function(name, value = NULL, id = NULL) {
     )
   )
 }
+
+horizontal_line <- function() {
+  tags$hr(class = "board-hr")
+}
