@@ -141,7 +141,7 @@ gamesReportsServer <- function(id, games) {
       })
     })
 
-    output$download <- downloadHandler(
+    output$descargar <- downloadHandler(
       filename = function() {
         appCatch(paste0("reporte_", input$partida, ".pdf"))
       },

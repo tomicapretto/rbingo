@@ -83,18 +83,11 @@ boardServer <- function(id, store, games, cards, parent_session) {
       }
     })
 
-    # TODO: El temporizador deberia correr en JS.
+    # Temporizador que corre en JS.
     observe({
       appCatch({
         req(store$playing)
-        invalidateLater(1000, session)
-        isolate({
-          mod_store$playing_time <- mod_store$playing_time + 1
-          min <- mod_store$playing_time %/% 60
-          sec <- mod_store$playing_time %% 60
-          text <- paste0(min, " min. ", sec, " seg.")
-          shinyjs::html("time_played", paste("Tiempo de juego: ", text))
-        })
+        shinyjs::runjs(sprintf("timer('#%s');", NS(id, "time_played")))
       })
     })
 
@@ -215,6 +208,7 @@ boardServer <- function(id, store, games, cards, parent_session) {
                 store$playing <- FALSE
                 shinyjs::js$hideHeader("")
                 shinyjs::html("ball", "")
+                shinyjs::runjs("clearInterval(countdown)")
               }
             })
           },
@@ -262,16 +256,14 @@ boardServer <- function(id, store, games, cards, parent_session) {
     observe({
       appCatch({
         req(store$playing, mod_store$player)
-        text <- paste("Pozo acumulado en bolilla:", store$partida_info$pozo_acumulado)
-        shinyjs::html("pozo_acumulado", text)
+        shinyjs::html("pozo_acumulado", store$partida_info$pozo_acumulado)
       })
     })
 
     observe({
       appCatch({
         req(store$playing, mod_store$player)
-        text <- paste("Bolillas jugadas:", length(mod_store$nums))
-        shinyjs::html("balls_played", text)
+        shinyjs::html("balls_played", length(mod_store$nums))
       })
     })
 
@@ -351,7 +343,7 @@ boardServer <- function(id, store, games, cards, parent_session) {
         req(store$playing, playing$line_3)
         if (length(winners$line_3) > 0) {
           text <- paste0("N", intToUtf8(176), " ", winners$line_3, collapse = ", ")
-          text <- stringr::str_trunc(text, 34, side = "right")
+          text <- stringr::str_trunc(text, 45, side = "right")
           text2 <- if (length(winners$line_3) == 1) {
             paste(length(winners$line_3), "ganador")
           } else {
@@ -370,7 +362,7 @@ boardServer <- function(id, store, games, cards, parent_session) {
         req(store$playing, playing$line_4)
         if (length(winners$line_4) > 0) {
           text <- paste0("N", intToUtf8(176), " ", winners$line_4, collapse = ", ")
-          text <- stringr::str_trunc(text, 34, side = "right")
+          text <- stringr::str_trunc(text, 45, side = "right")
           text2 <- if (length(winners$line_4) == 1) {
             paste(length(winners$line_4), "ganador")
           } else {
@@ -389,7 +381,7 @@ boardServer <- function(id, store, games, cards, parent_session) {
         req(store$playing, playing$line_5)
         if (length(winners$line_5) > 0) {
           text <- paste0("N", intToUtf8(176), " ", winners$line_5, collapse = ", ")
-          text <- stringr::str_trunc(text, 34, side = "right")
+          text <- stringr::str_trunc(text, 45, side = "right")
           text2 <- if (length(winners$line_5) == 1) {
             paste(length(winners$line_5), "ganador")
           } else {
@@ -432,7 +424,7 @@ boardServer <- function(id, store, games, cards, parent_session) {
         req(store$playing)
         if (length(winners$card) > 0) {
           text <- paste0("N", intToUtf8(176), " ", winners$card, collapse = ", ")
-          text <- stringr::str_trunc(text, 32, side = "right")
+          text <- stringr::str_trunc(text, 45, side = "right")
           text2 <- if (length(winners$card) == 1) {
             paste(length(winners$card), "ganador")
           } else {
@@ -469,7 +461,7 @@ boardServer <- function(id, store, games, cards, parent_session) {
           text <- paste0("N", intToUtf8(176), " ", winners$looser$cards,
             collapse = ", "
           )
-          text <- stringr::str_trunc(text, 32, side = "right")
+          text <- stringr::str_trunc(text, 45, side = "right")
           text2 <- if (winners_n == 1) "1 ganador" else paste(winners_n, "ganadores")
           text3 <- paste(winners$looser$hits, "aciertos")
         } else {
@@ -824,26 +816,23 @@ boardUI <- function(id) {
           column(
             width = 4,
             tags$div(
-              tagList(
-                tags$p(
-                  id = NS(id, "balls_played"), "Bolillas jugadas: 0",
-                  style = "font-size: 20px"
-                ),
-                tags$p(
-                  id = NS(id, "time_played"),
-                  "Tiempo de juego: 0 min. 0 seg.",
-                  style = "font-size: 20px"
-                ),
-                tags$p(
-                  id = NS(id, "pozo_acumulado"),
-                  "Pozo acumulado en bolilla:",
-                  style = "font-size: 20px"
-                )
+              tags$p(
+                "Bolillas jugadas",
+                tags$span(id = NS(id, "balls_played"), style = "font-weight: bold"),
+                class = "board-adelanto"
               ),
-              style = "margin-top:10px"
+              tags$p(
+                "Tiempo de juego",
+                tags$span(id = NS(id, "time_played"), style = "font-weight: bold"),
+                class = "board-adelanto"
+              ),
+              tags$p(
+                "Pozo acumulado en bolilla",
+                tags$span(id = NS(id, "pozo_acumulado"), style = "font-weight: bold"),
+                class = "board-adelanto"
+              )
             ),
             horizontal_line(),
-            # TODO: Hay que ocultar este div cuando se haya sorteado todo!
             tags$div(
               id = NS(id, "adelantos"),
               tags$div("Adelantos", class = "board-info-header"),

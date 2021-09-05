@@ -15,6 +15,7 @@ ui_body <- function() {
       shiny::includeCSS(app_file("www", "board.css")),
       shiny::includeCSS(app_file("www", "bingo-ball.css")),
       shiny::includeCSS(app_file("www", "remove_link.css")),
+      shiny::includeScript(app_file("www", "timer.js")),
       tags$style("rbingo-body {min-height: 100vh !important}"),
     ),
 
@@ -30,6 +31,8 @@ ui_body <- function() {
       }",
       functions = "refocus"
     ),
+
+
 
     # Activar notificaciones
     shinypop::use_notiflix_notify(
