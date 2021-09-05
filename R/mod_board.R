@@ -865,20 +865,18 @@ boardUI <- function(id) {
 
 displayWinners <- function(id, prize) {
   name <- paste0(tolower(unlist(strsplit(prize, split = " "))), collapse = "-")
-  fluidRow(
-    class = "board-adelanto",
-    column(
-      width = 9,
+  tags$div(
+    class = "board-winners",
+    tags$div(
       tags$p(
         prize,
         tags$span(
           id = NS(id, paste0("winners-", name)),
           class = "board-winner"
         )
-      )
+      ),
     ),
-    column(
-      width = 3,
+    tags$div(
       tags$p(
         tags$span(
           id = NS(id, paste0("n-winners-", name)),
