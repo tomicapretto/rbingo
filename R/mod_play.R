@@ -25,7 +25,7 @@ playServer <- function(id, store, games, cards, parent_session) {
         if (!isTruthy(input$prizes)) {
           showError("Se debe seleccionar al menos un premio")
         }
-        if (!"Carton lleno" %in% input$prizes) {
+        if (!"carton_lleno" %in% input$prizes) {
           showError("No se puede jugar sin carton lleno")
         }
         # Chequear que hay cartones vendidos (no se juega sin cartones vendidos)
@@ -86,12 +86,16 @@ playUI <- function(id) {
                 inputId = NS(id, "prizes"),
                 label = "Seleccione los premios a sortear",
                 choices = c(
-                  "Terno", "Cuaterno", "Linea", "Carton lleno",
-                  "Bingo consuelo", "Menor acierto"
+                  "Terno" = "terno",
+                  "Cuaterno" = "cuaterno",
+                  "Linea" = "linea",
+                  "Carton lleno" = "carton_lleno",
+                  "Bingo consuelo" = "bingo_consuelo",
+                  "Menor acierto" = "menor_acierto"
                 ),
                 selected = c(
-                  "Terno", "Cuaterno", "Linea", "Carton lleno",
-                  "Bingo consuelo", "Menor acierto"
+                  "terno", "cuaterno", "linea", "carton_lleno",
+                  "bingo_consuelo", "menor_acierto"
                 ),
                 status = "primary", justified = TRUE, individual = TRUE,
                 width = "100%"
