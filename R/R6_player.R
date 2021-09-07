@@ -44,19 +44,7 @@ Player = R6::R6Class(
 
       # Una lista con objetos de clase Prize
       self$prizes = prizes
-      self$rvs$next_prize_idx = 1
-    },
-
-    get_previous_prize = function() {
-      if (self$rvs$next_prize_idx > 1) {
-        self$prizes[[self$rvs$next_prize_idx - 1]]
-      }
-    },
-
-    get_next_prize = function() {
-      if (self$rvs$next_prize_idx <= length(self$prizes)) {
-        self$prizes[[self$rvs$next_prize_idx]]
-      }
+      self$rvs$prizes_played = list()
     },
 
     get_advances = function() {
@@ -75,12 +63,24 @@ Player = R6::R6Class(
       }
     },
 
+    get_previous_prize = function() {
+      if (length(self$rvs$prizes_played)) {
+        self$rvs$prizes_played[[length(self$rvs$prizes_played)]]
+      }
+    },
+
+    get_next_prize = function() {
+      if (length(self$rvs$prizes_played) < length(self$prizes)) {
+        self$prizes[[length(self$rvs$prizes_played) + 1]]
+      }
+    },
+
     check_prize_backward = function() {
       prize = self$get_previous_prize()
       if (!is.null(prize)) {
         prize$play(self)
         if (!prize$done) {
-          self$rvs$next_prize_idx = self$rvs$next_prize_idx - 1
+          self$rvs$prizes_played <- head(self$rvs$prizes_played, -1)
         }
       }
     },
@@ -90,9 +90,16 @@ Player = R6::R6Class(
       if (!is.null(prize)) {
         prize$play(self)
         if (prize$done) {
-          self$rvs$next_prize_idx = self$rvs$next_prize_idx + 1
+          self$rvs$prizes_played <- append(self$rvs$prizes_played, prize)
         }
       }
+    },
+
+    is_full_card_won = function() {
+      for (prize in self$rvs$prizes_played) {
+        if (prize$name == "Carton lleno") return(TRUE)
+      }
+      return(FALSE)
     },
 
     add_ball = function(ball) {
