@@ -76,23 +76,38 @@ Player = R6::R6Class(
     },
 
     check_prize_backward = function() {
-      prize = self$get_previous_prize()
+      prize <- self$get_previous_prize()
       if (!is.null(prize)) {
-        prize$play(self)
+        prize$play(self, numeric(0))
         if (!prize$done) {
           self$rvs$prizes_played <- head(self$rvs$prizes_played, -1)
+          return(prize)
         }
       }
     },
 
     check_prize_forward = function() {
-      prize = self$get_next_prize()
+      prize <- self$get_next_prize()
       if (!is.null(prize)) {
-        prize$play(self)
+        exclude <- self$get_winners_of_equivalent_prize(prize)
+        prize$play(self, exclude)
         if (prize$done) {
           self$rvs$prizes_played <- append(self$rvs$prizes_played, prize)
+          return(prize)
         }
       }
+    },
+
+    get_winners_of_equivalent_prize = function(prize) {
+      winners <- c()
+      for (other_prize in self$rvs$prizes_played) {
+        same_class <- class(other_prize)[1] == class(prize)[1]
+        same_matches <- other_prize$matches == prize$matches
+        if (same_class && same_matches) {
+          winners <- unique(c(winners, other_prize$winners))
+        }
+      }
+      return(winners)
     },
 
     is_full_card_won = function() {
@@ -102,6 +117,10 @@ Player = R6::R6Class(
       return(FALSE)
     },
 
+    # Chequear premios anteriores
+    # Ver si hay algun premio anterior con la misma cardinalidad (i.e. combinacion de space y cantidad de aciertos)
+    # Si lo hay, no contabilizar los ganadores de esos premios para este premio (un mismo carton no puede ganar carton lleno dos veces)
+
     add_ball = function(ball) {
       row_pos = self$row_pos[[ball]]
       row_val = mapply(`[[`, self$row_count, pos = row_pos, USE.NAMES = FALSE) + 1
@@ -110,7 +129,7 @@ Player = R6::R6Class(
       card_pos = self$card_pos[[ball]]
       card_val = mapply(`[[`, self$card_count, pos = card_pos, USE.NAMES = FALSE) + 1
       self$card_count = Map(`[<-`, self$card_count, pos = card_pos, value = card_val)
-      self$check_prize_forward()
+      return(self$check_prize_forward())
     },
 
     remove_ball = function(ball) {
@@ -121,7 +140,7 @@ Player = R6::R6Class(
       card_pos = self$card_pos[[ball]]
       card_val = mapply(`[[`, self$card_count, pos = card_pos, USE.NAMES = FALSE) - 1
       self$card_count = Map(`[<-`, self$card_count, pos = card_pos, value = card_val)
-      self$check_prize_backward()
+      return(self$check_prize_backward())
     },
 
     row_matches = function(matches = 5, type = c("eq", "ge")) {

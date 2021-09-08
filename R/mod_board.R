@@ -25,6 +25,8 @@ boardServer <- function(id, store, games, cards, parent_session) {
           cards,
           prizes
         )
+        # Actualizar siguiente premio apenas se crea el Player
+        shinyjs::html("siguiente-premio", rvs$player$get_header())
 
         rvs$cards_playing <- rvs$player$sales_count
         rvs$playing_time <- 0
@@ -47,16 +49,26 @@ boardServer <- function(id, store, games, cards, parent_session) {
       lapply(prizes, function(x) display_winners(id, x$name))
     })
 
-    # Agrego observers para los botones
+
+# Observers para agregar/eliminar bolillas --------------------------------
     lapply(seq(90), function(num) {
       id <- paste0("num_", num)
       observeEvent(input[[id]], {
         appCatch({
-          req(store$playing, rvs$player$get_next_prize())
-          rvs$player$add_ball(as.numeric(num))
-          rvs$nums <- c(rvs$nums, as.numeric(num))
-          rvs$last <- "add"
-          shinyjs::disable(id)
+          req(store$playing)
+          if (isTruthy(rvs$player$get_next_prize())) {
+            rvs$nums <- c(rvs$nums, as.numeric(num))
+            rvs$last <- "add"
+            shinyjs::disable(id)
+            prize <- rvs$player$add_ball(as.numeric(num))
+            if (!is.null(prize)) {
+              write_winners(prize)
+              report_winners(prize)
+              shinyjs::html("siguiente-premio", rvs$player$get_header())
+            }
+          } else {
+            shinyjs::hide("adelantos")
+          }
         })
       })
     })
@@ -66,38 +78,17 @@ boardServer <- function(id, store, games, cards, parent_session) {
         req(length(rvs$nums) > 0)
         last <- rvs$nums[length(rvs$nums)]
         rvs$nums <- rvs$nums[-length(rvs$nums)]
-        rvs$player$remove_ball(as.numeric(last))
         rvs$last <- "remove"
         shinyjs::enable(paste0("num_", last))
+        prize <- rvs$player$remove_ball(as.numeric(last))
+        if (!is.null(prize)) {
+          shinyjs::show("adelantos")
+          remove_winners(prize)
+          shinyjs::html("siguiente-premio", rvs$player$get_header())
+        }
       })
     })
 
-    # Titulo que indica el proximo premio
-    observe({
-      req(rvs$player, rvs$last)
-
-      # Actualizar cabecera de siguiente premio
-      shinyjs::html("siguiente-premio", rvs$player$get_header())
-
-      previous_prize <- rvs$player$get_previous_prize()
-      next_prize <- rvs$player$get_next_prize()
-
-      if (is.null(next_prize)) {
-        shinyjs::hide("adelantos")
-      } else {
-        shinyjs::show("adelantos")
-      }
-
-      if (!is.null(previous_prize)) {
-        if (rvs$last == "add") {
-          write_winners(previous_prize)
-          report_winners(previous_prize)
-        }
-      }
-      if ((!is.null(next_prize)) && rvs$last == "remove") {
-        remove_winners(next_prize)
-      }
-    })
 
     observe({
       appCatch({
@@ -129,7 +120,7 @@ boardServer <- function(id, store, games, cards, parent_session) {
           bolillas_acumulado,
           "bolillas."
         )
-        shinypop::nx_report_info("Pozo acumulado vacante!", msg)
+        shinypop::nx_report_info("Pozo acumulado vacante", msg)
       }
     }
 

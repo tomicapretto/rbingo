@@ -19,8 +19,9 @@ Prize = R6::R6Class(
       self$matches = matches
     },
 
-    play = function(player) {
+    play = function(player, exclude) {
       matches <- self$get_matches(player)
+      matches <- setdiff(matches, exclude)
       if (length(matches) > 0) {
         self$winners <- matches
         self$done <- TRUE

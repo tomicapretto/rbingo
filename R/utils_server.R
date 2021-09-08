@@ -81,10 +81,11 @@ appCatch <- function(expr) {
       showError(cnd$message)
     },
     error = function(cnd) {
-      showError("Ocurrio un error inesperado.")
       msg <- paste(format(Sys.time(), "%X -"), message = cnd$message)
       file <- file.path(app_file("log"), paste0(Sys.Date(), ".log"))
       write(msg, file, append = TRUE)
+      print(msg)
+      showError("Ocurrio un error inesperado.")
     }
   )
 }
