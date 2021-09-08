@@ -52,18 +52,18 @@ boardServer <- function(id, store, games, cards, parent_session) {
 
 # Observers para agregar/eliminar bolillas --------------------------------
     lapply(seq(90), function(num) {
-      id <- paste0("num_", num)
-      observeEvent(input[[id]], {
+      ball_id <- paste0("num_", num)
+      observeEvent(input[[ball_id]], {
         appCatch({
           req(store$playing)
           if (isTruthy(rvs$player$get_next_prize())) {
             rvs$nums <- c(rvs$nums, as.numeric(num))
             rvs$last <- "add"
-            shinyjs::disable(id)
+            shinyjs::disable(ball_id)
             prize <- rvs$player$add_ball(as.numeric(num))
             if (!is.null(prize)) {
               write_winners(prize)
-              report_winners(prize)
+              report_winners(id, prize)
               shinyjs::html("siguiente-premio", rvs$player$get_header())
             }
           } else {
@@ -71,6 +71,21 @@ boardServer <- function(id, store, games, cards, parent_session) {
           }
         })
       })
+    })
+
+    observeEvent(input$close_modal, ignoreInit = TRUE, {
+      shiny::removeModal()
+      next_prize = rvs$player$get_next_prize()
+      if (is(next_prize, "SmallestMatchPrize")) {
+        rvs$player$check_prize_forward()
+        shinyjs::delay(
+          1500, {
+            write_winners(next_prize)
+            report_winners(id, next_prize)
+            shinyjs::hide("adelantos")
+          }
+        )
+      }
     })
 
     observeEvent(input$delete_last, {
@@ -195,37 +210,6 @@ boardServer <- function(id, store, games, cards, parent_session) {
         )
       })
     })
-    # El looser se juega inmediatamente despues de que se gane el ultimo carton.
-    # Es decir, no es necesario tirar una nueva bolilla.
-    # observe({
-    #   appCatch({
-    #     if (playing$card && playing$card_2) req(finished$card, finished$card_2)
-    #     if (playing$card) req(finished$card)
-    #     req(playing$looser, !finished$looser, rvs$last == "add")
-    #     play_looser(rvs, finished, winners, win_state)
-    #   })
-    # })
-
-    # Menor acierto
-    # observeEvent(winners$looser, {
-    #   appCatch({
-    #     req(store$playing)
-    #     winners_n <- length(winners$looser$cards)
-    #     if (winners_n > 0) {
-    #       text <- paste0("N", intToUtf8(176), " ", winners$looser$cards,
-    #         collapse = ", "
-    #       )
-    #       text <- stringr::str_trunc(text, 45, side = "right")
-    #       text2 <- if (winners_n == 1) "1 ganador" else paste(winners_n, "ganadores")
-    #       text3 <- paste(winners$looser$hits, "aciertos")
-    #     } else {
-    #       text <- text2 <- text3 <- ""
-    #     }
-    #     shinyjs::html("winners-menor-acierto", text)
-    #     shinyjs::html("n-winners-menor-acierto", text2)
-    #     #shinyjs::html("winners0hits", text3)
-    #   })
-    # })
   })
 }
 
@@ -235,23 +219,6 @@ boardServer <- function(id, store, games, cards, parent_session) {
 # y para imprimir los resultados, pero no lo guardo en `games` porque seria bardo
 # O bueno, si no es bardo, lo guardo en `games` (pero ya significa guardar)
 # un archivo local mas
-
-report_winners <- function(prize) {
-  winners <- prize$winners
-  title <- paste0(prize$name, "!")
-
-  cards <- paste("N", intToUtf8(176), " ", winners, collapse = "<br/>")
-  text <- if (length(winners) > 1) {
-    paste0("Los cartones ganadores son<br/>", cards)
-  } else {
-    paste0("El carton ganador es<br/>", cards)
-  }
-  if (nchar(text) > 600) {
-    text <- stringr::str_trunc(text, 600, "right")
-    text <- paste0(text, "<br/>Informacion completa en el reporte")
-  }
-  shinypop::nx_report_info(title, HTML(text))
-}
 
 get_winner <- function(card_id, prize, strips) {
   strip_id <- ((card_id - 1) %/% 6) + 1
@@ -459,12 +426,56 @@ display_winners <- function(id, prize) {
   )
 }
 
+report_winners <- function(id, prize) {
+  winners <- prize$winners
+  ids <- vapply(winners, function(x) x$id, FUN.VALUE = numeric(1))
+  sellers <- vapply(winners, function(x) x$seller, FUN.VALUE = character(1))
+
+  ids <- paste0("N", intToUtf8(176), ids)
+  sellers <- paste0("(", sellers, ")")
+
+  f <- function(x, y) {
+    tags$div(
+      style = "display: flex; justify-content: space-between",
+      tags$div(x, style = "font-weight: bold; font-size: 22px;"),
+      tags$div(y, style = "font-size: 18px;")
+    )
+  }
+
+  content <- tags$div(
+    tags$div(
+      tags$p(prize$name),
+      style = paste(
+        "text-align:center",
+        "font-size: 26px",
+        "color: #2980b9",
+        "font-weight: bold",
+        sep = ";"
+      )
+    ),
+    tags$hr(),
+    tags$p("Los ganadores son", style = paste(
+      "text-align:center",
+      "font-size: 22px",
+      sep = ";")
+    ),
+    mapply(f, ids, sellers, SIMPLIFY = FALSE, USE.NAMES = FALSE)
+  )
+  shiny::showModal(
+    shiny::modalDialog(
+      content,
+      title = NULL,
+      footer = actionButton(NS(id, "close_modal"), "Aceptar")
+    )
+  )
+}
+
 write_winners <- function(prize) {
   winners <- prize$winners
   name <- make_prize_name(prize$name)
-
-  ids <- paste0("N", intToUtf8(176), " ", winners, collapse = ", ")
-  ids <- stringr::str_trunc(ids, 45, side = "right")
+  ids <- vapply(winners, function(x) x$id, FUN.VALUE = numeric(1))
+  ids <- paste0("N", intToUtf8(176), " ", ids, collapse = ", ")
+  ids <- substr(ids, 1, 45)
   if (length(winners) == 1) {
     count <- "1 ganador"
   } else {

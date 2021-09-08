@@ -53,7 +53,7 @@ ui_body <- function() {
       titleFontSize = "24px",
       titleMaxLength = 50,
       messageFontSize = "20px",
-      messageMaxLength = 1200,
+      messageMaxLength = 999999,
       buttonFontSize = "24px",
       width = "360px",
       backOverlayColor = "rgba(0,0,0,0.05)"

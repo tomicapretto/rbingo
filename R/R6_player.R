@@ -1,7 +1,6 @@
 Player = R6::R6Class(
   classname = "Player",
   cloneable = FALSE,
-  class = FALSE,
 
   public = list(
     rvs = "<reactiveValues>",
@@ -87,9 +86,10 @@ Player = R6::R6Class(
     },
 
     check_prize_forward = function() {
+      # Devuelve un premio si es que se lo gana
       prize <- self$get_next_prize()
       if (!is.null(prize)) {
-        exclude <- self$get_winners_of_equivalent_prize(prize)
+        exclude <- self$get_winners_id_of_equivalent_prize(prize)
         prize$play(self, exclude)
         if (prize$done) {
           self$rvs$prizes_played <- append(self$rvs$prizes_played, prize)
@@ -98,13 +98,18 @@ Player = R6::R6Class(
       }
     },
 
-    get_winners_of_equivalent_prize = function(prize) {
+    get_winners_id_of_equivalent_prize = function(prize) {
       winners <- c()
       for (other_prize in self$rvs$prizes_played) {
-        same_class <- class(other_prize)[1] == class(prize)[1]
+        same_type_of_prize <- class(other_prize)[1] == class(prize)[1]
         same_matches <- other_prize$matches == prize$matches
-        if (same_class && same_matches) {
-          winners <- unique(c(winners, other_prize$winners))
+        if (same_type_of_prize && same_matches) {
+          winners_id <- vapply(
+            other_prize$winners,
+            function(x) x$id,
+            FUN.VALUE = numeric(1)
+          )
+          winners <- unique(c(winners, winners_id))
         }
       }
       return(winners)
@@ -116,10 +121,6 @@ Player = R6::R6Class(
       }
       return(FALSE)
     },
-
-    # Chequear premios anteriores
-    # Ver si hay algun premio anterior con la misma cardinalidad (i.e. combinacion de space y cantidad de aciertos)
-    # Si lo hay, no contabilizar los ganadores de esos premios para este premio (un mismo carton no puede ganar carton lleno dos veces)
 
     add_ball = function(ball) {
       row_pos = self$row_pos[[ball]]
@@ -143,11 +144,9 @@ Player = R6::R6Class(
       return(self$check_prize_backward())
     },
 
-    row_matches = function(matches = 5, type = c("eq", "ge")) {
-      fun = switch(match.arg(type), "eq" = `==`, "ge" = `>=`)
-
+    row_matches = function(matches = 5, exclude = c(), prize = FALSE) {
       matching_rows = lapply(self$row_count, function(x) {
-        y = which(fun(x, matches))
+        y = which(x == matches)
         if (length(y) > 0) y else NULL
       })
 
@@ -169,15 +168,19 @@ Player = R6::R6Class(
       matches = unlist(
         Map(get_card_number, as.numeric(names(strip_not_null)), matching_cards)
       )
-
-      cards = matches[matches %in% self$cards_sold]
-      return(unique(cards))
+      cards <- unique(matches[matches %in% self$cards_sold])
+      if (!is.null(cards)) {
+        if (prize) {
+          return(self$make_winners(cards))
+        } else {
+          return(cards)
+        }
+      }
     },
 
-    card_matches = function(matches = 15, type = c("eq", "ge")) {
-      fun = switch(match.arg(type), "eq" = `==`, "ge" = `>=`)
+    card_matches = function(matches = 15, exclude = c(), prize = FALSE) {
       matching_cards = lapply(self$card_count, function(x) {
-        y = which(fun(x, matches))
+        y = which(x == matches)
         if (length(y) > 0) y else NULL
       })
       strip_not_null = which(!unlist(lapply(matching_cards, is.null)))
@@ -185,12 +188,34 @@ Player = R6::R6Class(
       matches = unlist(
         Map(get_card_number, as.numeric(names(strip_not_null)), matching_cards)
       )
-      unique(matches[matches %in% self$cards_sold])
+      cards <- unique(matches[matches %in% self$cards_sold])
+      if (!is.null(cards)) {
+        if (prize) {
+          return(self$make_winners(cards))
+        } else {
+          return(cards)
+        }
+      }
+    },
+
+    make_winners = function(cards) {
+      winners <- vector("list", length(cards))
+      for (i in seq_along(cards)) {
+        card <- cards[i]
+        idx <- between_which(card, self$sales$desde, self$sales$hasta)
+        seller <- self$sales[idx, "institucion"]
+        winners[[i]] <- Winner$new(card, seller)
+      }
+      return(winners)
     }
+
   )
 )
 
-get_card_number = function(ticket_n, card_n) {
+get_card_number <- function(ticket_n, card_n) {
   (ticket_n - 1) * 6 + card_n
 }
 
+between_which <- function(x, low, high) {
+  which(low <= x & x <= high )
+}
