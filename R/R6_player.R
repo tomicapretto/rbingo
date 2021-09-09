@@ -82,7 +82,12 @@ Player = R6::R6Class(
     check_prize_backward = function() {
       prize <- self$get_previous_prize()
       if (!is.null(prize)) {
-        prize$play(self, numeric(0))
+        if (is(prize, "SmallestMatchPrize")) {
+          prize$actual_matches <- NULL
+          prize$done <- FALSE
+        } else {
+          prize$play(self, numeric(0))
+        }
         if (!prize$done) {
           self$rvs$prizes_played <- head(self$rvs$prizes_played, -1)
           return(prize)
@@ -196,6 +201,7 @@ Player = R6::R6Class(
         Map(get_card_number, as.numeric(names(strip_not_null)), matching_cards)
       )
       cards <- unique(matches[matches %in% self$cards_sold])
+      cards <- setdiff(cards, exclude)
       if (!is.null(cards)) {
         if (prize) {
           return(self$make_winners(cards))

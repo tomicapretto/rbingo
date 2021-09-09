@@ -1,11 +1,11 @@
-new_prize <- function(name, matches, space = c("row", "card")) {
+new_prize <- function(name, matches, space = c("row", "card"), cumulated = NULL) {
   if (space == "row") {
     return(RowPrize$new(name, matches))
   } else {
     if (matches == 0) {
       return(SmallestMatchPrize$new(name, matches))
     }
-    return(CardPrize$new(name, matches))
+    return(CardPrize$new(name, matches, cumulated = cumulated))
   }
 }
 
@@ -18,9 +18,12 @@ Prize = R6::R6Class(
     done = FALSE,
     draws = NULL,
     winners = NULL,
-    initialize = function(name, matches) {
+    cumulated_n = NULL,
+    cumulated = FALSE,
+    initialize = function(name, matches, cumulated = NULL) {
       self$name = name
       self$matches = matches
+      self$cumulated_n = cumulated
     },
 
     play = function(player, exclude) {
@@ -28,10 +31,16 @@ Prize = R6::R6Class(
       if (length(winners) > 0) {
         self$winners <- winners
         self$draws <- player$balls
+        if (is.numeric(self$cumulated_n)) {
+          if (length(self$draws) <= self$cumulated_n) {
+            self$cumulated <- TRUE
+          }
+        }
         self$done <- TRUE
       } else {
         self$winners <- NULL
         self$draws <- NULL
+        self$cumulated <- FALSE
         self$done <- FALSE
       }
     },

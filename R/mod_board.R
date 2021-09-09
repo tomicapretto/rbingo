@@ -24,7 +24,12 @@ boardServer <- function(id, store, games, cards, parent_session) {
       appCatch({
         req(store$playing, input$dummy)
         prizes <- PRIZES[store$partida_info$prizes]
-        prizes <- lapply(prizes, function(prize) do.call(new_prize, prize))
+        prizes <- lapply(prizes, function(prize) {
+          if (prize$name == "Carton lleno") {
+            prize$cumulated = store$partida_info$pozo_acumulado
+          }
+          do.call(new_prize, prize)
+        })
         rvs$game <- games$return_game(store$partida_info$partida)
         rvs$player <- Player$new(rvs$game, cards, prizes)
         rvs$nums <- isolate(rvs$game$sequence)
@@ -98,9 +103,17 @@ boardServer <- function(id, store, games, cards, parent_session) {
         shinyjs::enable(paste0("num_", last))
         prize <- rvs$player$remove_ball(as.numeric(last))
         if (!is.null(prize)) {
-          shinyjs::show("adelantos")
           remove_winners(prize)
+          shinyjs::show("adelantos")
           shinyjs::html("siguiente-premio", rvs$player$get_header())
+
+          if (is(prize, "SmallestMatchPrize")) {
+            prize2 <- rvs$player$check_prize_backward()
+            if (!is.null(prize2)) {
+              remove_winners(prize2)
+              shinyjs::html("siguiente-premio", rvs$player$get_header())
+            }
+          }
         }
       })
     })
@@ -425,8 +438,11 @@ report_winners <- function(id, prize) {
   ids <- paste0("N", intToUtf8(176), ids)
   sellers <- paste0("(", sellers, ")")
 
+  name <- prize$name
+  if (prize$cumulated) name <- paste(name, "(Pozo acumulado!)")
+
   content <- tags$div(
-    tags$div(tags$p(prize$name), class = "modal-title"),
+    tags$div(name, class = "modal-title"),
     tags$hr(),
     tags$p("Los ganadores son", class = "modal-title-lower"),
     mapply(add_single_winner, ids, sellers, SIMPLIFY = FALSE, USE.NAMES = FALSE)
