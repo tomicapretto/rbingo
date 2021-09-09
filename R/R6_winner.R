@@ -4,9 +4,11 @@ Winner <- R6::R6Class(
   public = list(
     id = NULL,
     seller = NULL,
-    initialize = function(id, seller) {
+    card = NULL,
+    initialize = function(id, seller, card, draws) {
       self$id = id
       self$seller = seller
+      self$card = card
     }
   )
 )

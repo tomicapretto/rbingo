@@ -29,6 +29,14 @@ Cards <- R6::R6Class(
       tiras_n <- cards_n / 6
       tiras <- self$strips_print[seq_len(tiras_n)]
       graficar_tiras(tiras, serie, color)
+    },
+
+    get_card_by_id = function(id) {
+      strip_id <- ((id - 1) %/% 6) + 1
+      idx <- ((id - 1) %% 6) + 1
+      strip <- self$strips_print[[strip_id]]
+      card <- as.vector(strip[(3 * idx - 2):(3 * idx), ])
+      return(card)
     }
   )
 )

@@ -2,34 +2,26 @@ boardServer <- function(id, store, games, cards, parent_session) {
   moduleServer(id, function(input, output, session) {
 
     isolate({
-      appCatch({
-        rvs <- reactiveValues()
-        rvs$nums <- numeric()
-        rvs$partida <- NULL
-        rvs$cards_playing <- NULL
-        rvs$player <- NULL
-        rvs$playing_time <- 0
-        rvs$last <- NULL
-      })
+      rvs <- reactiveValues()
+      rvs$nums <- numeric()
+      rvs$player <- NULL
+      rvs$last <- NULL
     })
 
     observeEvent(store$playing, {
       appCatch({
         req(store$playing)
-        rvs$partida <- store$partida_info$partida
 
         prizes <- PRIZES[store$partida_info$prizes]
         prizes <- lapply(prizes, function(prize) do.call(new_prize, prize))
         rvs$player <- Player$new(
-          games$return_game(rvs$partida),
+          games$return_game(store$partida_info$partida),
           cards,
           prizes
         )
+
         # Actualizar siguiente premio apenas se crea el Player
         shinyjs::html("siguiente-premio", rvs$player$get_header())
-
-        rvs$cards_playing <- rvs$player$sales_count
-        rvs$playing_time <- 0
 
         # Escribe bolilla del pozo acumulado
         shinyjs::html("pozo_acumulado", store$partida_info$pozo_acumulado)
@@ -38,8 +30,8 @@ boardServer <- function(id, store, games, cards, parent_session) {
         shinyjs::runjs(sprintf("timer('#%s');", NS(id, "time_played")))
 
         # Informacion sobre la partida y los cartones
-        shinyjs::html("partida_en_juego", rvs$partida)
-        shinyjs::html("cartones_en_juego", rvs$cards_playing)
+        shinyjs::html("partida_en_juego", store$partida_info$partida)
+        shinyjs::html("cartones_en_juego", rvs$player$sales_count)
       })
     }, )
 
@@ -50,7 +42,7 @@ boardServer <- function(id, store, games, cards, parent_session) {
     })
 
 
-# Observers para agregar/eliminar bolillas --------------------------------
+    # Observers para agregar/eliminar bolillas ----------------------------
     lapply(seq(90), function(num) {
       ball_id <- paste0("num_", num)
       observeEvent(input[[ball_id]], {
@@ -73,21 +65,6 @@ boardServer <- function(id, store, games, cards, parent_session) {
       })
     })
 
-    observeEvent(input$close_modal, ignoreInit = TRUE, {
-      shiny::removeModal()
-      next_prize = rvs$player$get_next_prize()
-      if (is(next_prize, "SmallestMatchPrize")) {
-        rvs$player$check_prize_forward()
-        shinyjs::delay(
-          1500, {
-            write_winners(next_prize)
-            report_winners(id, next_prize)
-            shinyjs::hide("adelantos")
-          }
-        )
-      }
-    })
-
     observeEvent(input$delete_last, {
       appCatch({
         req(length(rvs$nums) > 0)
@@ -103,6 +80,21 @@ boardServer <- function(id, store, games, cards, parent_session) {
         }
       })
     })
+
+    observeEvent(input$close_modal, {
+      shiny::removeModal()
+      next_prize = rvs$player$get_next_prize()
+      if (is(next_prize, "SmallestMatchPrize")) {
+        rvs$player$check_prize_forward()
+        shinyjs::delay(
+          1500, {
+            write_winners(next_prize)
+            report_winners(id, next_prize)
+            shinyjs::hide("adelantos")
+          }
+        )
+      }
+    }, ignoreInit = TRUE)
 
 
     observe({
@@ -131,78 +123,89 @@ boardServer <- function(id, store, games, cards, parent_session) {
     check_cumulated <- function(bolillas, bolillas_acumulado) {
       if (length(bolillas) == bolillas_acumulado) {
         msg <- paste(
-          "Nadie ha obtenido carton lleno luego de haber sorteado",
+          "Nadie ganó el carton lleno luego de sortear",
           bolillas_acumulado,
           "bolillas."
         )
-        shinypop::nx_report_info("Pozo acumulado vacante", msg)
+        content <- tags$div(
+          tags$div("Pozo acumulado vacante", class = "modal-title"),
+          tags$hr(),
+          tags$p(msg, class = "modal-title-lower")
+        )
+        shiny::showModal(
+          shiny::modalDialog(
+            content,
+            title = NULL,
+            footer = modalButton("Aceptar"),
+          )
+        )
       }
     }
+
 
     observeEvent(input$btn_stop, {
       req(rvs$player)
       appCatch({
         if (is.null(rvs$player$get_next_prize())) {
-          msg <- HTML(
-            paste(
+          msg <- tags$p(
               "Podra visualizar el informe de la partida en la solapa",
-              "<strong>Reportes</strong>."
+              tags$strong("Reportes")
+            )
+        } else {
+          msg <- tags$p(
+            paste(
+              "Esta partida aun cuenta con sorteos por finalizar.",
+              "Si decide confirmar, la partida continuara disponible para",
+              "ser jugada en el futuro."
             )
           )
-        } else {
-          msg <- paste(
-            "Esta partida aun cuenta con sorteos por finalizar.",
-            "Si decide confirmar, la partida continuara disponible para",
-            "ser jugada en el futuro."
-          )
         }
-        shinypop::nx_confirm(
-          inputId = "confirm",
-          title = "Finalizar partida?",
-          message = msg,
-          button_ok = "Confirmar",
-          button_cancel = "Cancelar"
+        content <- tags$div(
+          tags$div("Finalizar partida?", class = "modal-title"),
+          tags$hr(),
+          tags$div(msg, style = "font-size: 22px")
         )
-        observeEvent(input$confirm,
-          {
+
+        shiny::showModal(
+          shiny::modalDialog(
+            content,
+            title = NULL,
+            footer = tagList(
+              actionButton(NS(id, "cancel"), "Cancelar"),
+              actionButton(NS(id, "confirm"), "Confirmar"),
+            )
+          )
+        )
+        observeEvent(input$cancel, {shiny::removeModal()},
+          once = TRUE,
+          ignoreInit = TRUE
+        )
+        observeEvent(input$confirm, {
             appCatch({
-              if (input$confirm) {
-                if (is.null(rvs$player$get_next_prize())) {
-                  winner_cards <- get_winner_cards(winners)
-                  winners2 <- mapply(get_winner, winner_cards$id, winner_cards$prize,
-                    MoreArgs = list(strip = cards$strips_print),
-                    SIMPLIFY = FALSE
-                  )
-                  game_info <- list(
-                    "parameters" = list(
-                      name = rvs$partida,
-                      serie = games$serie(rvs$partida),
-                      cards_n = rvs$cards_playing,
-                      date_start = store$partida_info$date_start,
-                      date_end = Sys.time()
-                    ),
-                    "results" = list(
-                      line_3 = if (!is.null(win_state$line_3)) length(win_state$line_3) else "",
-                      line_4 = if (!is.null(win_state$line_4)) length(win_state$line_4) else "",
-                      line_5 = if (!is.null(win_state$line_5)) length(win_state$line_5) else "",
-                      card = if (!is.null(win_state$card)) length(win_state$card) else "",
-                      card_2 = if (!is.null(win_state$card_2)) length(win_state$card_2) else ""
-                    ),
-                    "sequence" = rvs$nums,
-                    "winners" = winners2
-                  )
-                  games$finalize_game(rvs$partida, game_info)
-                }
-                # Luego de imprimir reporte, reinicio todo lo relacionado al juego.
-                disable_play_mode(parent_session)
-                purrr::walk(paste0("num_", seq(90)), shinyjs::enable)
-                rvs$nums <- numeric()
-                rvs$player <- NULL
-                store$playing <- FALSE
-                shinyjs::js$hideHeader("")
-                shinyjs::html("ball", "")
-                shinyjs::runjs("clearInterval(countdown)")
+              if (is.null(rvs$player$get_next_prize())) {
+                game_info <- list(
+                  "parameters" = list(
+                    "name" = store$partida_info$partida,
+                    "serie" = games$serie(store$partida_info$partida),
+                    "cards_n" = rvs$player$sales_count,
+                    "date_start" = store$partida_info$date_start,
+                    "date_end" = Sys.time(),
+                    "sequence" = rvs$nums
+                  ),
+                  "prizes" = rvs$player$rvs$prizes_played
+                )
+                games$finalize_game(store$partida_info$partida, game_info)
               }
+              # Reiniciar todo lo relacionado al juego.
+              shiny::removeModal()
+              disable_play_mode(parent_session)
+              purrr::walk(paste0("num_", seq(90)), shinyjs::enable)
+              rvs$nums <- numeric()
+              rvs$player <- NULL
+              store$playing <- FALSE
+              shinyjs::js$hideHeader("")
+              shinyjs::html("ball", "")
+              shinyjs::runjs("clearInterval(countdown)")
             })
           },
           once = TRUE,
@@ -214,12 +217,6 @@ boardServer <- function(id, store, games, cards, parent_session) {
 }
 
 # Helpers ----------------------------------------------------------------------
-# Me falta la lista donde emparejo al numero de carton con el nombre
-# del vendedor y el nombre de la institucion. Eso lo hago para el juego
-# y para imprimir los resultados, pero no lo guardo en `games` porque seria bardo
-# O bueno, si no es bardo, lo guardo en `games` (pero ya significa guardar)
-# un archivo local mas
-
 get_winner <- function(card_id, prize, strips) {
   strip_id <- ((card_id - 1) %/% 6) + 1
   idx <- ((card_id - 1) %% 6) + 1
@@ -228,46 +225,8 @@ get_winner <- function(card_id, prize, strips) {
   list(
     numbers = card_numbers,
     card = card_id,
-    name = "",
-    city = "",
     prize = prize
   )
-}
-
-get_winner_cards <- function(winners) {
-  ids <- numeric()
-  prizes <- character()
-
-  if (length(winners$line_3) > 0) {
-    ids <- c(ids, winners$line_3)
-    prizes <- c(prizes, rep("TERNO", length(winners$line_3)))
-  }
-
-  if (length(winners$line_4) > 0) {
-    ids <- c(ids, winners$line_4)
-    prizes <- c(prizes, rep("CUATERNO", length(winners$line_4)))
-  }
-
-  if (length(winners$line_5) > 0) {
-    ids <- c(ids, winners$line_5)
-    prizes <- c(prizes, rep("LINEA", length(winners$line_5)))
-  }
-
-  if (length(winners$card) > 0) {
-    ids <- c(ids, winners$card)
-    prizes <- c(prizes, rep("BINGO", length(winners$card)))
-  }
-
-  if (length(winners$card_2) > 0) {
-    ids <- c(ids, winners$card_2)
-    prizes <- c(prizes, rep("BINGO CONSUELO", length(winners$card_2)))
-  }
-
-  if (length(winners$looser$cards) > 0) {
-    ids <- c(ids, winners$looser$cards)
-    prizes <- c(prizes, rep("MENOR ACIERTO", length(winners$looser$cards)))
-  }
-  return(list("id" = ids, "prize" = prizes))
 }
 
 board <- function(id) {
@@ -426,6 +385,14 @@ display_winners <- function(id, prize) {
   )
 }
 
+add_single_winner <- function(x, y) {
+  tags$div(
+    class = "modal-winner-container",
+    tags$div(x, class = "modal-winner-id"),
+    tags$div(y, class = "modal-winner-seller")
+  )
+}
+
 report_winners <- function(id, prize) {
   winners <- prize$winners
   ids <- vapply(winners, function(x) x$id, FUN.VALUE = numeric(1))
@@ -434,33 +401,13 @@ report_winners <- function(id, prize) {
   ids <- paste0("N", intToUtf8(176), ids)
   sellers <- paste0("(", sellers, ")")
 
-  f <- function(x, y) {
-    tags$div(
-      style = "display: flex; justify-content: space-between",
-      tags$div(x, style = "font-weight: bold; font-size: 22px;"),
-      tags$div(y, style = "font-size: 18px;")
-    )
-  }
-
   content <- tags$div(
-    tags$div(
-      tags$p(prize$name),
-      style = paste(
-        "text-align:center",
-        "font-size: 26px",
-        "color: #2980b9",
-        "font-weight: bold",
-        sep = ";"
-      )
-    ),
+    tags$div(tags$p(prize$name), class = "modal-title"),
     tags$hr(),
-    tags$p("Los ganadores son", style = paste(
-      "text-align:center",
-      "font-size: 22px",
-      sep = ";")
-    ),
-    mapply(f, ids, sellers, SIMPLIFY = FALSE, USE.NAMES = FALSE)
+    tags$p("Los ganadores son", class = "modal-title-lower"),
+    mapply(add_single_winner, ids, sellers, SIMPLIFY = FALSE, USE.NAMES = FALSE)
   )
+
   shiny::showModal(
     shiny::modalDialog(
       content,

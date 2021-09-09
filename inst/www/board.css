@@ -119,3 +119,38 @@ a.board-cell.disabled {
   font-size: 20px;
   text-align: center;
 }
+
+.modal-backdrop.in {
+  opacity: 0;
+}
+
+.modal {
+  background: rgba(0,0,0,0);
+}
+
+.modal-title {
+  text-align: center;
+  font-size: 26px;
+  color: #2980b9;
+  font-weight: bold;
+}
+
+.modal-title-lower {
+  text-align: center;
+  font-size: 22px;
+}
+
+.modal-winner-container {
+  display: flex;
+  justify-content: space-between;
+}
+
+.modal-winner-id {
+  font-weight: bold;
+  font-size: 22px;
+}
+
+.modal-winner-seller {
+  font-size: 18px;
+}
+

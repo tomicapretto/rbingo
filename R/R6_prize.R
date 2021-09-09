@@ -27,9 +27,11 @@ Prize = R6::R6Class(
       winners <- self$get_matches(player, exclude)
       if (length(winners) > 0) {
         self$winners <- winners
+        self$draws <- player$balls
         self$done <- TRUE
       } else {
         self$winners <- NULL
+        self$draws <- NULL
         self$done <- FALSE
       }
     },

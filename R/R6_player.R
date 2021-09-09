@@ -15,7 +15,9 @@ Player = R6::R6Class(
     card_pos = NULL,
     row_count = NULL,
     card_count = NULL,
+    cards = NULL,
     prizes = NULL,
+    balls = numeric(0),
 
     initialize = function(game, cards, prizes) {
 
@@ -40,6 +42,9 @@ Player = R6::R6Class(
 
       names(self$row_count) = as.character(self$strips_sold)
       names(self$card_count) = as.character(self$strips_sold)
+
+      # Mantengo el listado de cartones para meterlo en el winner
+      self$cards = cards
 
       # Una lista con objetos de clase Prize
       self$prizes = prizes
@@ -130,6 +135,7 @@ Player = R6::R6Class(
       card_pos = self$card_pos[[ball]]
       card_val = mapply(`[[`, self$card_count, pos = card_pos, USE.NAMES = FALSE) + 1
       self$card_count = Map(`[<-`, self$card_count, pos = card_pos, value = card_val)
+      self$balls <- c(self$balls, ball)
       return(self$check_prize_forward())
     },
 
@@ -141,6 +147,7 @@ Player = R6::R6Class(
       card_pos = self$card_pos[[ball]]
       card_val = mapply(`[[`, self$card_count, pos = card_pos, USE.NAMES = FALSE) - 1
       self$card_count = Map(`[<-`, self$card_count, pos = card_pos, value = card_val)
+      self$balls <- self$balls[self$balls != ball]
       return(self$check_prize_backward())
     },
 
@@ -201,10 +208,11 @@ Player = R6::R6Class(
     make_winners = function(cards) {
       winners <- vector("list", length(cards))
       for (i in seq_along(cards)) {
-        card <- cards[i]
-        idx <- between_which(card, self$sales$desde, self$sales$hasta)
+        card_id <- cards[i]
+        idx <- between_which(card_id, self$sales$desde, self$sales$hasta)
         seller <- self$sales[idx, "institucion"]
-        winners[[i]] <- Winner$new(card, seller)
+        card <- self$cards$get_card_by_id(card_id)
+        winners[[i]] <- Winner$new(card_id, seller, card)
       }
       return(winners)
     }

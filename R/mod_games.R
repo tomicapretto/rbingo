@@ -159,8 +159,8 @@ gamesReportsServer <- function(id, games) {
         cards <- results$cards_n
         serie <- results$serie
         balls <- results$balls_n
-        date_start <- format(results$date_start, "%Y/%m/%d %H:%M:%S")
-        date_end <- format(results$date_end, "%Y/%m/%d %H:%M:%S")
+        date_start <- format(results$date_start, "/%m/%d/%Y %H:%M:%S")
+        date_end <- format(results$date_end, "/%m/%d/%Y %H:%M:%S")
       } else {
         cards <- date <- serie <- balls <- date_start <- date_end <- ""
       }

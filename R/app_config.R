@@ -1,6 +1,9 @@
 SHEET_HEIGHT <- 14
 SHEET_WIDTH <- 8.5
 
+REPORT_HEIGHT <- 11.7
+REPORT_WIDTH <- 8.3
+
 PRIZES <- list(
   "terno" = list(
     name = "Terno",

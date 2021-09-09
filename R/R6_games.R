@@ -290,17 +290,18 @@ Game <- R6::R6Class(
     },
     generate_report = function(info) {
       file_path <- file.path(self$path(), "report.pdf")
-      grDevices::pdf(file_path, width = 8.3, height = 11.7)
+      grDevices::pdf(file_path, width = REPORT_WIDTH, height = REPORT_HEIGHT)
       print_report(info)
       grDevices::dev.off()
     },
     results = function() {
+      # FIXME
       if (self$rvs$meta$played) {
         serie <- self$rvs$meta$finalized_info$parameters$serie
         date_start <- self$rvs$meta$finalized_info$parameters$date_start
         date_end <- self$rvs$meta$finalized_info$parameters$date_end
         cards_n <- self$rvs$meta$finalized_info$parameters$cards_n
-        balls_n <- length(self$rvs$meta$finalized_info$sequence)
+        balls_n <- length(self$rvs$meta$finalized_info$parameters$sequence)
         winners <- self$rvs$meta$finalized_info$winners
 
         winners <- vapply(winners, function(x) x$prize, character(1))
@@ -387,8 +388,8 @@ print_parameters <- function(parameters) {
       name,
       serie,
       cards_n,
-      format(date_start, "%Y/%m/%d %H:%M:%S"),
-      format(date_end, "%Y/%m/%d %H:%M:%S"),
+      format(date_start, "%m/%d/%Y %H:%M:%S"),
+      format(date_end, "%m/%d/%Y %H:%M:%S"),
       sep = "\n"
     ),
     x = grid::unit(0.975, "npc"),
@@ -398,12 +399,14 @@ print_parameters <- function(parameters) {
   )
 }
 
-print_results <- function(results) {
-  line_3 <- results$line_3
-  line_4 <- results$line_4
-  line_5 <- results$line_5
-  card <- results$card
-  card_2 <- results$card_2
+print_results <- function(prizes) {
+  prize_label <- character(length(prizes))
+  prize_ball_n <- numeric(length(prizes))
+  for (i in seq_along(prizes)) {
+    prize <- prizes[[i]]
+    prize_label[i] <- paste("Ganador", toupper(prize$name), "en bolilla")
+    prize_ball_n[i] <- length(prize$draws)
+  }
   grid::grid.text(
     label = "Resultados del sorteo",
     x = grid::unit(0.025, "npc"),
@@ -411,20 +414,15 @@ print_results <- function(results) {
     just = "left",
     gp = grid::gpar(fontsize = 12, fontface = "bold")
   )
-  text <- paste("Ganador TERNO en bolilla", "Ganador CUATERNO en bolilla",
-    "Ganador LINEA en bolilla", "Ganador BINGO en bolilla",
-    "Ganador BINGO CONSUELO en bolilla",
-    sep = "\n"
-  )
   grid::grid.text(
-    label = text,
+    label = paste(prize_label, collapse = "\n"),
     x = grid::unit(0.025, "npc"),
     y = grid::unit(0.8, "npc"),
     just = c("left", "top"),
     gp = grid::gpar(fontsize = 12)
   )
   grid::grid.text(
-    label = paste(line_3, line_4, line_5, card, card_2, sep = "\n"),
+    label = paste(prize_ball_n, collapse = "\n"),
     x = grid::unit(0.975, "npc"),
     y = grid::unit(0.8, "npc"),
     just = c("right", "top"),
@@ -485,16 +483,16 @@ print_winner_card <- function(numbers) {
   grid::popViewport()
 }
 
-print_winner_info <- function(card_id, name, place, prize) {
+print_winner_info <- function(card_id, seller, prize) {
   grid::grid.text(
-    label = paste("Numero de carton", "Ganador", "Localidad", "Premio", sep = "\n"),
+    label = paste("Premio", "Numero de carton", "Vendedor", sep = "\n"),
     x = grid::unit(0.025, "npc"),
     y = grid::unit(0.925, "npc"),
     just = c("left", "top"),
     gp = grid::gpar(fontsize = 11)
   )
   grid::grid.text(
-    label = paste(card_id, name, place, prize, sep = "\n"),
+    label = paste(prize, card_id, seller, sep = "\n"),
     x = grid::unit(0.975, "npc"),
     y = grid::unit(0.925, "npc"),
     just = c("right", "top"),
@@ -502,16 +500,16 @@ print_winner_info <- function(card_id, name, place, prize) {
   )
 }
 
-print_winner <- function(card_numbers, card, person_name, city, prize) {
+print_winner <- function(winner) {
   lyt <- grid::grid.layout(ncol = 2, widths = c(0.55, 0.45))
   grid::pushViewport(grid::viewport(0.5, 0.5, 1, 0.975, layout = lyt))
 
   grid::pushViewport(grid::viewport(layout.pos.col = 1))
-  print_winner_card(card_numbers)
+  print_winner_card(winner$numbers)
   grid::popViewport()
 
   grid::pushViewport(grid::viewport(layout.pos.col = 2))
-  print_winner_info(card, person_name, city, prize)
+  print_winner_info(winner$id, winner$seller, winner$prize)
   grid::popViewport(2)
 }
 
@@ -550,12 +548,12 @@ print_report <- function(game_info) {
 
   # Resultados
   grid::pushViewport(grid::viewport(layout.pos.col = 2))
-  print_results(game_info$results)
+  print_results(game_info$prizes)
   grid::popViewport(3)
 
   # Secuencia
   grid::pushViewport(grid::viewport(layout.pos.row = 3))
-  print_sequence(game_info$sequence)
+  print_sequence(game_info$parameters$sequence)
   grid::popViewport(3)
 
   # Cartones ganadores - primera pagina
@@ -564,17 +562,32 @@ print_report <- function(game_info) {
   lyt <- grid::grid.layout(nrow = 6)
   grid::pushViewport(grid::viewport(0.5, 0.5, 1, 1, layout = lyt))
 
-  winners <- game_info$winners
-  if (length(winners) > 6) {
+  winners <- list()
+  for (prize in game_info$prizes) {
+    winners_ <- list()
+    for (i in seq_along(prize$winners)) {
+      winner <- prize$winners[[i]]
+      winners_[[i]] <- list(
+        numbers = winner$card,
+        id = winner$id,
+        seller = winner$seller,
+        prize = prize$name
+      )
+    }
+    winners <- c(winners, winners_)
+  }
+  winners_n <- length(winners)
+
+  if (winners_n > 6) {
     rows <- seq_len(6)
   } else {
-    rows <- seq_len(length(winners))
+    rows <- seq_len(winners_n)
   }
+
   for (i in rows) {
     grid::pushViewport(grid::viewport(layout.pos.row = i))
     grid::grid.lines(x = c(0.01, 0.99), y = c(0.99, 0.99))
-    winner <- winners[[i]]
-    print_winner(winner$numbers, winner$card, winner$name, winner$city, winner$prize)
+    print_winner(winners[[i]])
     grid::popViewport()
   }
   grid::popViewport(2)
@@ -603,8 +616,7 @@ print_report <- function(game_info) {
     for (i in seq_along(winners2)) {
       grid::pushViewport(grid::viewport(layout.pos.row = i))
       grid::grid.lines(x = c(0.01, 0.99), y = c(0.99, 0.99))
-      winner <- winners2[[i]]
-      print_winner(winner$numbers, winner$card, winner$name, winner$city, winner$prize)
+      print_winner(winners2[[i]])
       grid::popViewport()
     }
     grid::popViewport()
