@@ -50,23 +50,12 @@ sidebarMenuHeader <- function(text, icon_class) {
 }
 
 summaryRow <- function(name, value = NULL, id = NULL) {
-  fluidRow(
-    column(
-      width = 6,
-      tags$p(
-        name,
-        style = "text-align:left"
-      )
-    ),
-    column(
-      width = 6,
-      tags$strong(
-        tags$p(
-          value,
-          id = id,
-          style = "text-align:right"
-        )
-      )
+  tags$div(
+    style = "display: flex; justify-content: space-between;",
+    tags$div(tags$p(name)),
+    tags$div(
+      tags$p(value, id = id),
+      style = "font-weight: bold",
     )
   )
 }

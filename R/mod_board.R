@@ -5,20 +5,34 @@ boardServer <- function(id, store, games, cards, parent_session) {
       rvs <- reactiveValues()
       rvs$nums <- numeric()
       rvs$player <- NULL
+      rvs$game <- NULL
       rvs$last <- NULL
     })
 
-    observeEvent(store$playing, {
-      appCatch({
-        req(store$playing)
+    # Este dummy es una especie de hack para que los valores se actualizen
+    # DESPUES de que se crean los html donde van los mensajes de los premios.
+    output$winners <- renderUI({
+      req(store$playing)
+      prizes <- PRIZES[store$partida_info$prizes]
+      tagList(
+        shinyjs::hidden(numericInput(NS(id, "dummy"), "no-label", value = 0)),
+        lapply(prizes, function(x) display_winners(id, x$name))
+      )
+    })
 
+    observeEvent(c(input$dummy, store$playing), {
+      appCatch({
+        req(store$playing, input$dummy)
         prizes <- PRIZES[store$partida_info$prizes]
         prizes <- lapply(prizes, function(prize) do.call(new_prize, prize))
-        rvs$player <- Player$new(
-          games$return_game(store$partida_info$partida),
-          cards,
-          prizes
-        )
+        rvs$game <- games$return_game(store$partida_info$partida)
+        rvs$player <- Player$new(rvs$game, cards, prizes)
+        rvs$nums <- isolate(rvs$game$sequence)
+
+        if (length(rvs$nums)) {
+          showInfo("Recuperando bolillas sorteadas...")
+          for (num in rvs$nums) play_forward(num, FALSE)
+        }
 
         # Actualizar siguiente premio apenas se crea el Player
         shinyjs::html("siguiente-premio", rvs$player$get_header())
@@ -33,16 +47,33 @@ boardServer <- function(id, store, games, cards, parent_session) {
         shinyjs::html("partida_en_juego", store$partida_info$partida)
         shinyjs::html("cartones_en_juego", rvs$player$sales_count)
       })
-    }, )
-
-    # Crea div con los ganadores
-    output$winners <- renderUI({
-      prizes <- PRIZES[store$partida_info$prizes]
-      lapply(prizes, function(x) display_winners(id, x$name))
-    })
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
 
     # Observers para agregar/eliminar bolillas ----------------------------
+    play_forward <- function(num, add_winners_modal = TRUE) {
+      appCatch({
+        ball_id <- paste0("num_", num)
+        rvs$last <- "add"
+        shinyjs::disable(ball_id)
+        prize <- rvs$player$add_ball(as.numeric(num))
+        if (!is.null(prize)) {
+          write_winners(prize)
+          shinyjs::html("siguiente-premio", rvs$player$get_header())
+          if (add_winners_modal) {
+            report_winners(id, prize)
+          }
+        }
+      })
+    }
+    observeEvent(rvs$nums, {
+      # Para el backup... y no perder el sorteo!
+      isolate({
+        rvs$game$sequence <- rvs$nums
+        rvs$game$save_sequence()
+      })
+    }, ignoreInit = TRUE)
+
     lapply(seq(90), function(num) {
       ball_id <- paste0("num_", num)
       observeEvent(input[[ball_id]], {
@@ -50,19 +81,12 @@ boardServer <- function(id, store, games, cards, parent_session) {
           req(store$playing)
           if (isTruthy(rvs$player$get_next_prize())) {
             rvs$nums <- c(rvs$nums, as.numeric(num))
-            rvs$last <- "add"
-            shinyjs::disable(ball_id)
-            prize <- rvs$player$add_ball(as.numeric(num))
-            if (!is.null(prize)) {
-              write_winners(prize)
-              report_winners(id, prize)
-              shinyjs::html("siguiente-premio", rvs$player$get_header())
-            }
+            play_forward(num)
           } else {
             shinyjs::hide("adelantos")
           }
         })
-      })
+      }, ignoreInit = TRUE)
     })
 
     observeEvent(input$delete_last, {
@@ -200,7 +224,7 @@ boardServer <- function(id, store, games, cards, parent_session) {
               shiny::removeModal()
               disable_play_mode(parent_session)
               purrr::walk(paste0("num_", seq(90)), shinyjs::enable)
-              rvs$nums <- numeric()
+              rvs$nums <- numeric(0)
               rvs$player <- NULL
               store$playing <- FALSE
               shinyjs::js$hideHeader("")

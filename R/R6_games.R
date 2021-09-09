@@ -172,6 +172,7 @@ Game <- R6::R6Class(
   public = list(
     rvs = "<reactiveValues>",
     vendors = list(),
+    sequence = numeric(0),
     initialize = function(vendors, type = c("new", "load"), ...) {
       type <- match.arg(type)
       self$rvs <- reactiveValues()
@@ -208,6 +209,13 @@ Game <- R6::R6Class(
       if (!dir.exists(folder)) dir.create(folder)
       saveRDS(self$rvs$sales, file.path(folder, "sales.rds"), compress = FALSE)
       saveRDS(self$rvs$meta, file.path(folder, "meta.rds"), compress = FALSE)
+      self$save_sequence()
+    },
+    save_sequence = function() {
+      folder <- app_file("data", "games")
+      folder <- file.path(folder, paste0("game_", self$rvs$meta$folder_id))
+      if (!dir.exists(folder)) dir.create(folder)
+      saveRDS(self$sequence, file.path(folder, "sequence.rds"), compress = FALSE)
     },
     name = function() {
       self$rvs$meta$name
@@ -295,28 +303,25 @@ Game <- R6::R6Class(
       grDevices::dev.off()
     },
     results = function() {
-      # FIXME
       if (self$rvs$meta$played) {
         serie <- self$rvs$meta$finalized_info$parameters$serie
         date_start <- self$rvs$meta$finalized_info$parameters$date_start
         date_end <- self$rvs$meta$finalized_info$parameters$date_end
         cards_n <- self$rvs$meta$finalized_info$parameters$cards_n
         balls_n <- length(self$rvs$meta$finalized_info$parameters$sequence)
-        winners <- self$rvs$meta$finalized_info$winners
 
-        winners <- vapply(winners, function(x) x$prize, character(1))
-        winners_names <- unique(winners)
-        winners_count <- numeric(length(winners_names))
-
-        for (i in seq_along(winners_count)) {
-          winners_count[i] <- sum(winners == winners_names[i])
-        }
+        prizes <- self$rvs$meta$finalized_info$prizes
+        prize_names <- vapply(
+          prizes, function(x) x$name, FUN.VALUE = character(1)
+        )
+        winners_n <- vapply(
+          prizes, function(x) length(x$winners), FUN.VALUE = numeric(1)
+        )
 
         return(list(
           "serie" = serie, "cards_n" = cards_n, "balls_n" = balls_n,
           "date_start" = date_start, "date_end" = date_end,
-          "winners_names" = winners_names,
-          "winners_count" = winners_count
+          "prize_names" = prize_names, "winners_n" = winners_n
         ))
       }
     }
@@ -329,10 +334,14 @@ read_game <- function(path, vendors) {
   meta <- readRDS(file.path(path, "meta.rds"))
   if (!meta$played) {
     sales <- readRDS(file.path(path, "sales.rds"))
+    sequence <- readRDS(file.path(path, "sequence.rds"))
   } else {
     sales <- NULL
+    sequence <- NULL
   }
-  Game$new(vendors = vendors, type = "load", meta = meta, sales = sales)
+  game <- Game$new(vendors = vendors, type = "load", meta = meta, sales = sales)
+  game$sequence <- sequence
+  game
 }
 
 generate_serie <- function(id) {
