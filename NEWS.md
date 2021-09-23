@@ -6,6 +6,11 @@ comienza el juego.
 adapta segun la pantalla.
 * Ya no es posible clickear botones luego de que se hayan sorteado todos los 
 premios.
+* El nombre del vendedor esta en negrita en el resumen en la solapa de ventas.
+* Se reportan la cantidad de aciertos en el premio al menor acierto. Esta aparece
+en el modal que informa el premio, en el panel lateral derecho, y en el informe
+final.
+
 
 # rbingo 0.1.4
 

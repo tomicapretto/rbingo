@@ -144,7 +144,7 @@ imprimir_ventas <- function(data, cards_n) {
   paste0(
     encabezado, "\n\n",
     paste0(
-      "* ", instituciones, " (", ventas_agg, " ventas)\n",
+      "* <strong>", instituciones, "</strong> (", ventas_agg, " ventas)\n",
       "  Cartones: ", ventas_des, ".",
       collapse = "\n\n"
     )

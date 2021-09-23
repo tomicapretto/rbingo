@@ -65,13 +65,14 @@ salesServer <- function(id, store, games, vendors) {
       })
     })
 
-    output$text_summary <- renderText({
+    observe({
       appCatch({
         if (isTruthy(input$partida)) {
-          games$print_sales_summary(input$partida)
+          content <- HTML(games$print_sales_summary(input$partida))
         } else {
-          "No hay partidas disponibles."
+          content <- "No hay partidas disponibles."
         }
+        shinyjs::html("summary", content)
       })
     })
 
@@ -215,7 +216,7 @@ salesUI <- function(id) {
         title = "Ventas registradas",
         tabPanel(
           title = "Resumen",
-          verbatimTextOutput(NS(id, "text_summary"))
+          tags$pre(id = NS(id, "summary"))
         ),
         tabPanel(
           title = "Tabla",

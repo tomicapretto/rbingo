@@ -154,3 +154,7 @@ a.board-cell.disabled {
   font-size: 18px;
 }
 
+.modal-aciertos-n {
+  text-align: center;
+  font-size: 22px;
+}

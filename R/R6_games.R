@@ -129,7 +129,10 @@ Games <- R6::R6Class(
     print_sales_summary = function(game) {
       data <- self$sales(game)
       if (nrow(data) == 0) {
-        "No se registran ventas para esta partida."
+        paste0(
+          "Cantidad de cartones: ", self$cards_n(game), "\n",
+          "Cantidad de cartones vendidos: 0"
+        )
       } else {
         imprimir_ventas(data, self$cards_n(game))
       }
@@ -413,8 +416,15 @@ print_results <- function(prizes) {
   prize_ball_n <- numeric(length(prizes))
   for (i in seq_along(prizes)) {
     prize <- prizes[[i]]
-    prize_label[i] <- paste("Ganador", toupper(prize$name), "en bolilla")
-    prize_ball_n[i] <- length(prize$draws)
+
+    if (is(prize, "SmallestMatchPrize")) {
+      prize_label[i] <- paste("Aciertos en el", toupper(prize$name))
+      prize_ball_n[i] <- prize$actual_matches
+    } else {
+      prize_label[i] <- paste("Ganador", toupper(prize$name), "en bolilla")
+      prize_ball_n[i] <- length(prize$draws)
+    }
+
   }
   grid::grid.text(
     label = "Resultados del sorteo",

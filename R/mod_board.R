@@ -400,26 +400,33 @@ make_prize_name <- function(name) {
 display_winners <- function(id, prize) {
   name <- make_prize_name(prize)
   tags$div(
-    class = "board-winners",
     tags$div(
-      tags$p(
-        prize,
-        tags$span(
-          id = NS(id, paste0("winners-", name)),
-          class = "board-winner"
-        )
+      class = "board-winners",
+      tags$div(
+        tags$p(
+          prize,
+          tags$span(
+            id = NS(id, paste0("winners-", name)),
+            class = "board-winner"
+          )
+        ),
       ),
+      tags$div(
+        tags$p(
+          tags$span(
+            id = NS(id, paste0("n-winners-", name)),
+            class = "board-prize"
+          ),
+          style = "text-align: right;"
+        )
+      )
     ),
     tags$div(
-      tags$p(
-        tags$span(
-          id = NS(id, paste0("n-winners-", name)),
-          class = "board-prize"
-        ),
-        style = "text-align: right;"
-      )
+      id = NS(id, paste0("winners-extra", name)),
+      style = "font-size: 15px; font-weight: bold;"
     )
   )
+
 }
 
 add_single_winner <- function(x, y) {
@@ -441,8 +448,14 @@ report_winners <- function(id, prize) {
   name <- prize$name
   if (prize$cumulated) name <- paste(name, "(Pozo acumulado!)")
 
+  extra <- ""
+  if (is(prize, "SmallestMatchPrize")) {
+    extra <- paste(prize$actual_matches, "aciertos")
+  }
+
   content <- tags$div(
     tags$div(name, class = "modal-title"),
+    tags$p(extra, class = "modal-aciertos-n"),
     tags$hr(),
     tags$p("Los ganadores son", class = "modal-title-lower"),
     mapply(add_single_winner, ids, sellers, SIMPLIFY = FALSE, USE.NAMES = FALSE)
@@ -470,10 +483,20 @@ write_winners <- function(prize) {
   }
   shinyjs::html(paste0("winners-", name), ids)
   shinyjs::html(paste0("n-winners-", name), count)
+
+  if (is(prize, "SmallestMatchPrize")) {
+    shinyjs::html(
+      paste0("winners-extra", name),
+      paste(prize$actual_matches, "aciertos")
+    )
+  }
 }
 
 remove_winners <- function(prize) {
   name <- make_prize_name(prize$name)
   shinyjs::html(paste0("winners-", name), "")
   shinyjs::html(paste0("n-winners-", name), "")
+  if (is(prize, "SmallestMatchPrize")) {
+    shinyjs::html(paste0("winners-extra", name), "")
+  }
 }
